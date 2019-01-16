@@ -14,7 +14,7 @@ Go to the [Amazon Connect Console](https://console.aws.amazon.com/connect/home?r
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. From the AWS Management Console, choose **Services** then select **Amazon Connect** under Contact Center and then **Get started**
+1. From the AWS Management Console, choose **Services** then select **Amazon Connect** under Contact Center and then **Get started**.  If you already been using Connect, then choose **Add an instance**.
 
 1. In **Step 1: Identity management**, select **Store users within Amazon Connect** and provide a domain name (e.g. `{FirstName}` to complete the **Access URL** and click **Next step**
 	
@@ -28,6 +28,8 @@ Go to the [Amazon Connect Console](https://console.aws.amazon.com/connect/home?r
 1. In **Step 4: Data storage**, accept the defaults
 
 1. In **Step 5: Review and create**, review your settings and then select **Create Instance**
+
+1. It will take a few minutes to setup Amazon Connect.  Just when you are thinking of going for a coffee, it will tell you **Success!**.
 </p></details>
 
 ### Claim a phone number for your Amazon Connect instance
@@ -35,17 +37,22 @@ Once your Amazon Connect instance has been created, click **Get started** to sel
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. Select **Get started** to open the Amazon Connect Contact Center Manager (CCM) welcome screen
+1. Select **Get started** to open the Amazon Connect Contact Center Manager (CCM) welcome screen.  When prompted, you want to allow the browser to access your microphone.  This will allow you to answer calls from your browser.
 
 1. Select **Let's go** to claim a phone number
 
-1. Select **United States +1**, **Direct Dial**, and choose a phone number from the numbers provided
+1. Select **Canada+1**, **Direct Dial**, and choose a phone number from the numbers provided.  Click **Next**.
+    > If you are concerned about the Area Code location, you can check its geography from the following wikipedia link: https://en.wikipedia.org/wiki/List_of_North_American_Numbering_Plan_area_codes#Canada
 
-1. Dial the phone number you selected in step 3 from another phone (e.g. your mobile phone) and choose **1** from the voice menu to connect with an agent; you can then use the Amazon Connect Contact Control Panel to accept the call
+1. You can now make a test call and get the default Connect experience.  Dial the phone number you selected in step 3 (displayed on screen) from another phone (e.g. your mobile phone).  Once connected, choose **1** from the voice menu to connect with an agent; the Amazon Connect Contract Control Panel (the current page) will then prompt you to answer the call.
 	> It may take a few minutes before the claimed phone number is active.
 
-1. Choose **Continue** to get to the Amazon Connect Contact Center Manager App (CCM); poke around a bit to see what's available
-	> If you accepted a call, it should show up under the Contact search option.
+1. Choose **Continue** to get to the Amazon Connect Contact Center Manager App (CCM).  Feel free to click around to see what is available.
+    * On the screen, you will see the **Configuration Guide** that will step you through the configuration of your call center.  You can **Hide the guide** in the upper right corner.
+    * Once you **Hide the guide** (in the upper right corner), you will see some basic analytics.  You should have a summary of the test calls that you made.
+    * You can **configure** the appearance of your dashboard using the button on the upper right side.  Be sure you **Save** after you make your changes.
+    * on the left hand side, you will see a series of icons.  This is where you access the details of Connect.  You can hover the mouse over each icon and then click on the fly-out menu.
+   	> If you accepted a call, you can search for it through the Contact Search option.  Navigate with the left-hand menu and select Metrics and Quality (second icon) > Contact Search.  You can then search for your call.
 </p></details>
 
 ### Configure contact flow
@@ -54,37 +61,49 @@ With a Connect instance and a phone number, you can now create the Contact Flow 
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. In the Amazon Connect Console, select your instance, then choose Contact Flows to allow Amazon Connect to interact with the `InternationalPlan` bot
+1. For this next portion, you want to return to the AWS Management Console and select services **Amazon Connect**.  You should see your newly created instance on the Amazon Connect Console.
+
+1. In the Amazon Connect Console, select your instance, then in the options menu, choose **Contact Flows**.  Scroll down until you see the `Amazon Lex` category.  Select your region and then select the Bot that you created in Module 1. 
+
+1. Make sure you click **+Add Lex Bot**.  After a few seconds, you will see the `Chatbot` appear in the list of Lex bots.  You are now ready to integrate this chatbot with Connect.
 
 	<img src="images/allow_connect_integration.png" alt="Allow Connect to interact with the bot"/>
 
-1. In the Amazon Connect Contact Center Manager, use the navigation pane on the left hand side to select **Routing** and then **Contact flows**
+1. We will now return to the Connect Contact Center Manager (CCM) screen.  If you have closed the tab, you will need to re-connect by clicking on **Overview** and then **Login as administrator**.
+
+1. Once in the Connect Contact Center Manager (CCM), use the navigation pane on the left hand side to select **Routing**(third icon) and then **Contact flows**.  The page will list all the pre-configured flows that are available to you.  You can ignore most of them and move on to the next step.
 
 	![ContactFlowNavigation](images/contact_flows_navigation.png)
-	
-	> If you closed your browser window you can always re-open the Amazon Connect Contact Center Manager from the [Amazon Connect console](https://console.aws.amazon.com/connect/home?region=us-east-1). Just selct your Amazon connect instance and click on the **Login as administrator** button in the **Overview** section of the console. 
 
-1. In the top right corner select **Create contact flow** to open the contact flow editor
+1. In the top right corner select **Create contact flow** to open the contact flow editor.  There are two buttons, one labelled **Create contact flow** and one with an **arrow**.  Just click on the first button.
 
 1. Name your contact flow `CustomerServiceChatbot`
 
 1. Expand the **Interact** group of blocks and drag and drop the **Get customer input** block onto the grid
 
-1. Expand the **Terminate / Transfer** group of blocks and drag and drop the **Disconnect / Hang up** block onto the grid
+	![ContactFlowNavigation](images/contact_flows_customer_input.png)
 
-1. Wire up the three building blocks as shown in the image below
+1. Collapse **Interact** and expand the **Terminate / Transfer** group of blocks and drag and drop the **Disconnect / Hang up** block onto the grid
+
+	![ContactFlowNavigation](images/contact_flows_terminate.png)
+
+1. Wire up the three building blocks as shown in the image below.  You click on the white-circle and drag to the connection point in the next block.
 
 	![ContactFlowWiring](images/contact_flow_wiring.png)
 
 1. Double click on the **Get customer input** block to access its configuration
 	
-	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  ` Welcome to the marvelous telco company. How can I help you today?`
+	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `Welcome to the marvelous telco company. How can I help you today?`
 	
-	1. Select **Amazon Lex** input type
-	
-	1. Enter `InternationalPlan` bot name and `dev` alias
+	1. Keep the default 'Interpret as: Text'
 
-	1. Click **Save**
+	1. Scroll down and select the **Amazon Lex** tab
+	
+	1. Click in the drop-down box and wait for your list of chat-bots to populate.  Select `Chatbot`.
+	
+	1. You can now select your alias, such as `dev`
+
+	1. Ignore the other options and Click **Save**
 
 		<img src="images/get_customer_input.png" alt="Get customer input configuration" width="50%" />
 	
@@ -101,11 +120,13 @@ Now you need to associate your new contact flow with your phone number
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. Select **Routing** and **Phone Numbers** on the left hand Amazon Connect navigation pane
+1. Select **Routing** (third icon) and **Phone Numbers** on the left hand Amazon Connect navigation pane
 
 1. Click on the number to edit the contact flow
 
-1. Search and select the `CustomerServiceChatbot` contact flow in the **Contact flow/IVR** field
+1. Update the description 'Contact flow for customer service chatbot'.
+
+1. In the **Contact flow/IVR** field, search and select the `CustomerServiceChatbot` contact flow.
 
 1. Select **Save** to confirm the contact flow association
 </p></details>
@@ -123,7 +144,7 @@ In this last step we are enhancing the customer input configuration of the conta
 
 1. Re-open the CCM app; within the [Amazon Connect console](https://console.aws.amazon.com/connect/home?region=us-east-1) select **Overview** and **Login as administrator**
 
-1. On the left hand navigation select **Routing** - **Contact flows**
+1. On the left hand navigation select **Routing** (third icon) - **Contact flows**
 
 	![ContactFlowNavigation](images/contact_flows_navigation.png)
 	
@@ -133,13 +154,18 @@ In this last step we are enhancing the customer input configuration of the conta
 
 1. Scroll to the bottom and under **Session attributes** click **Add an attribute**
 
-1. Select **Use attribute**
+1. Select **Use attribute** and enter the following
 
-1. In the **Type** drop-down, select **System**, enter `IncomingNumber` in the **Destination Key** field and select **Customer Number** from the **Attribute** drop down
+    1. Destination Key:  `IncomingNumber`
+	1. Type: **System**
+	1. Attribute: **Customer Number**
 
 1. Click **Add another attribute**
 
-1. Enter `Source` as **Destination Key** and `AmazonConnect` as **Value**
+1. Select **Use text** and enter the following
+
+    1. Destination Key: `Source`
+	1. Value: `AmazonConnect`
 
 1. Select **Save**
 
