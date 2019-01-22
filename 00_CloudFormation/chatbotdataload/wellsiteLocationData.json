@@ -1,0 +1,14 @@
+[
+  {
+    "wellSiteId": "01-10-33-23 W5",
+    "commonName": "Well 5",
+    "oilProductionRate": "50",
+    "waterProductionRate": "500"
+  },
+  {
+    "wellSiteId": "01-10-33-23 W6",
+    "commonName": "Well 6",
+    "oilProductionRate": "60",
+    "waterProductionRate": "600"
+  }
+]

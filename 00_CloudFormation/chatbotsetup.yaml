@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: resources to make up lex bot
+Resources:
+  # BotHandlerFunction:
+  #   Properties:
+  #     CodeUri: s3://nal-chatbot-201902/chatbotlambda.zip
+  #     Description: Lambda handler for travel plan bot
+  #     Environment:
+  #       Variables:
+  #         OPERATOR_DDB_TABLE:
+  #           Ref: OperatorDDBTable
+  #         WELL_SITE_LOCATION_DDB_TABLE:
+  #           Ref: WellsiteLocationDDBTable
+  #         WELL_SITE_VISIT_DDB_TABLE:
+  #           Ref: WellsiteVisitDDBTable
+  #     FunctionName:
+  #       Fn::Sub: ${AWS::StackName}-LexBotHandler
+  #     Handler: index.handler
+  #     MemorySize: 256
+  #     Policies:
+  #       Statement:
+  #       - Action:
+  #         - dynamodb:*
+  #         Effect: Allow
+  #         Resource:
+  #         - '*'
+  #     Runtime: python3.7
+  #     Timeout: 20
+  #   Type: AWS::Serverless::Function
+  DataLoaderFunction:
+    Properties:
+      CodeUri: s3://nal-chatbot-201902/chatbotdataload.zip
+      Description: Lambda function to load the data catalog.
+      Environment:
+        Variables:
+          OPERATOR_DDB_TABLE:
+            Ref: OperatorDDBTable
+          WELL_SITE_LOCATION_DDB_TABLE:
+            Ref: WellsiteLocationDDBTable
+          WELL_SITE_VISIT_DDB_TABLE:
+            Ref: WellsiteVisitDDBTable
+      Handler: index.handler
+      MemorySize: 256
+      Policies:
+        Statement:
+        - Action:
+          - dynamodb:*
+          Effect: Allow
+          Resource:
+          - '*'
+      Runtime: nodejs8.10
+      Timeout: 20
+    Type: AWS::Serverless::Function
+  LoadPlanData:
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - DataLoaderFunction
+        - Arn
+    Type: Custom::LoadDynamoDB
+  OperatorDDBTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: operatorName
+        AttributeType: S
+      KeySchema:
+      - AttributeName: operatorName
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: '3'
+        WriteCapacityUnits: '3'
+    Type: AWS::DynamoDB::Table
+  WellsiteLocationDDBTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: wellSiteId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: wellSiteId
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: '3'
+        WriteCapacityUnits: '3'
+    Type: AWS::DynamoDB::Table
+  WellsiteVisitDDBTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: wellSiteId
+        AttributeType: S
+      - AttributeName: dateOfLastVisit
+        AttributeType: S
+      KeySchema:
+      - AttributeName: wellSiteId
+        KeyType: HASH
+      - AttributeName: dateOfLastVisit
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: '3'
+        WriteCapacityUnits: '3'
+      TableName:
+        Fn::Sub: ${AWS::StackName}-WellsiteVisit
+    Type: AWS::DynamoDB::Table
+Transform: AWS::Serverless-2016-10-31

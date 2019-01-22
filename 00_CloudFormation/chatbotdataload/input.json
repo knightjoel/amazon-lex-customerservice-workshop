@@ -1,0 +1,12 @@
+{
+  "RequestType": "Create",
+  "ServiceToken": "arn:aws:lambda:us-east-1:705122445634:function:lex-workshop-DataLoaderFunction-1VZ843DKERM6I",
+  "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/arn%3Aaws%3Acloudformation%3Aus-east-1%3A705122445634%3Astack/lex-workshop/1479e5f0-bddb-11e7-aee8-50fae98a10d2%7CLoadPlanData%7C2bd7624e-f1a7-48e5-ac48-b6a5a9bf02cd?AWSAccessKeyId=AKIAJNXHFR7P7YGKLDPQ&Expires=1509420695&Signature=zKeHEDIYmDNQ0VUqKDyZFICkLHA%3D",
+  "StackId": "arn:aws:cloudformation:us-east-1:705122445634:stack/lex-workshop/1479e5f0-bddb-11e7-aee8-50fae98a10d2",
+  "RequestId": "2bd7624e-f1a7-48e5-ac48-b6a5a9bf02cd",
+  "LogicalResourceId": "LoadPlanData",
+  "ResourceType": "Custom::LoadDynamoDB",
+  "ResourceProperties": {
+    "ServiceToken": "arn:aws:lambda:us-east-1:705122445634:function:lex-workshop-DataLoaderFunction-1VZ843DKERM6I"
+  }
+}

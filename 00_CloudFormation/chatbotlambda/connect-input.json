@@ -1,0 +1,34 @@
+{
+  "messageVersion": "1.0",
+  "invocationSource": "FulfillmentCodeHook",
+  "userId": "314217f1-069c-462a-9e85-313618f33a2c",
+  "sessionAttributes": {
+    "IncomingNumber": "+15106467466",
+    "Source": "AmazonConnect"
+  },
+  "bot": {
+    "name": "InternationalPlan",
+    "alias": null,
+    "version": "$LATEST"
+  },
+  "outputDialogMode": "Text",
+  "currentIntent": {
+    "name": "VerifyIdentity",
+    "slots": {
+      "pin": "1234",
+      "name": "Ann Smith"
+    },
+    "slotDetails": {
+      "pin": {
+        "resolutions": [],
+        "originalValue": null
+      },
+      "name": {
+        "resolutions": [],
+        "originalValue": ""
+      }
+    },
+    "confirmationStatus": "None"
+  },
+  "inputTranscript": "one two three four"
+}

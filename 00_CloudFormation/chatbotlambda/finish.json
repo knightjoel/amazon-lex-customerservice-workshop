@@ -1,0 +1,23 @@
+{
+  "messageVersion": "1.0",
+  "invocationSource": "FulfillmentCodeHook",
+  "userId": "2tne9jwbh3brazooszvvtxdsu7r4atuk",
+  "sessionAttributes": {
+    "identityVerified": "true",
+    "loggedInUser": "stubUser",
+    "planToApply": "C"
+  },
+  "bot": {
+    "name": "InternationalPlan",
+    "alias": null,
+    "version": "$LATEST"
+  },
+  "outputDialogMode": "Text",
+  "currentIntent": {
+    "name": "Finish",
+    "slots": {},
+    "slotDetails": {},
+    "confirmationStatus": "None"
+  },
+  "inputTranscript": "no"
+}

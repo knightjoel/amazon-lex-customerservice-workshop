@@ -1,0 +1,24 @@
+{
+  "messageVersion": "1.0",
+  "invocationSource": "FulfillmentCodeHook",
+  "userId": "us-east-1:3ce2e8ca-0f62-4312-9070-7b17d4f8a4b2",
+  "sessionAttributes": {
+    "loggedInUser": "bob",
+    "identityVerified": "true"
+  },
+  "bot": {
+    "name": "InternationalPlan",
+    "alias": null,
+    "version": "$LATEST"
+  },
+  "outputDialogMode": "Text",
+  "currentIntent": {
+    "name": "ApplyTravelPlan",
+    "slots": {
+      "planCode": "a"
+    },
+    "slotDetails": {},
+    "confirmationStatus": "None"
+  },
+  "inputTranscript": "check travel plans in my account"
+}

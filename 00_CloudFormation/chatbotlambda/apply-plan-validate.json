@@ -1,0 +1,49 @@
+{
+  "messageVersion": "1.0",
+  "invocationSource": "DialogCodeHook",
+  "userId": "mqo1vb1dt8xe8110s15u4mstn6fw1582",
+  "sessionAttributes": {
+    "identityVerified": "true",
+    "loggedInUser": "stubUser",
+    "planToApply": "C"
+  },
+  "bot": {
+    "name": "InternationalPlan",
+    "alias": null,
+    "version": "$LATEST"
+  },
+  "outputDialogMode": "Text",
+  "currentIntent": {
+    "name": "listInternationalPlan",
+    "slots": {
+      "Country": "Peru",
+      "numOfWeeks": "2",
+      "startDate": "2017-10-28",
+      "planCode": "C"
+    },
+    "slotDetails": {
+      "Country": {
+        "resolutions": [],
+        "originalValue": "isreal"
+      },
+      "numOfWeeks": {
+        "resolutions": [],
+        "originalValue": "0"
+      },
+      "startDate": {
+        "resolutions": [],
+        "originalValue": "tomorrow"
+      },
+      "planCode": {
+        "resolutions": [
+          {
+            "value": "C"
+          }
+        ],
+        "originalValue": "c"
+      }
+    },
+    "confirmationStatus": "None"
+  },
+  "inputTranscript": "0"
+}
