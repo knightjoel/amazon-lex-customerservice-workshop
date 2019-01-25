@@ -3,92 +3,73 @@ Description: resources to make up lex bot
 Transform: 'AWS::Serverless-2016-10-31'
 
 Resources:
-  UsersDDBTable:
-    Type: AWS::DynamoDB::Table
+  OperatorDDBTable:
     Properties:
-      TableName: !Sub "${AWS::StackName}-Users"
       AttributeDefinitions:
-      - AttributeName: userId
-        AttributeType: S
-      - AttributeName: phone
+      - AttributeName: operatorName
         AttributeType: S
       KeySchema:
-      - AttributeName: userId
+      - AttributeName: operatorName
         KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: '3'
         WriteCapacityUnits: '3'
-      GlobalSecondaryIndexes:
-      - IndexName:   "phoneindex"
-        KeySchema:
-        - AttributeName: phone
-          KeyType: HASH
-        Projection:
-          ProjectionType: ALL
-        ProvisionedThroughput:
-          ReadCapacityUnits: '3'
-          WriteCapacityUnits: '3'
-
-  UserTravelPlansDDBTable:
     Type: AWS::DynamoDB::Table
+  WellsiteLocationDDBTable:
     Properties:
-#      TableName: !Sub "${AWS::StackName}-UserTravelPlans"
       AttributeDefinitions:
-      - AttributeName: userId
-        AttributeType: S
-      - AttributeName: country
+      - AttributeName: wellSiteId
         AttributeType: S
       KeySchema:
-      - AttributeName: userId
+      - AttributeName: wellSiteId
         KeyType: HASH
-      - AttributeName: country
+      ProvisionedThroughput:
+        ReadCapacityUnits: '3'
+        WriteCapacityUnits: '3'
+    Type: AWS::DynamoDB::Table
+  WellsiteVisitDDBTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: wellSiteId
+        AttributeType: S
+      - AttributeName: dateOfLastVisit
+        AttributeType: S
+      KeySchema:
+      - AttributeName: wellSiteId
+        KeyType: HASH
+      - AttributeName: dateOfLastVisit
         KeyType: RANGE
       ProvisionedThroughput:
         ReadCapacityUnits: '3'
         WriteCapacityUnits: '3'
-
-  TravelPlanCatalogDDBTable:
+      TableName:
+        Fn::Sub: ${AWS::StackName}-WellsiteVisit
     Type: AWS::DynamoDB::Table
-    Properties:
-#      TableName: !Sub "${AWS::StackName}-TravelPlanCatalog"
-      AttributeDefinitions:
-      - AttributeName: country
-        AttributeType: S
-      - AttributeName: planName
-        AttributeType: S
-      KeySchema:
-      - AttributeName: country
-        KeyType: HASH
-      - AttributeName: planName
-        KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: '3'
-        WriteCapacityUnits: '3'
 
 
-  BotHandlerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: "Lambda handler for travel plan bot"
-      FunctionName: !Sub "${AWS::StackName}-LexBotHandler"
-      CodeUri: ../lambda-functions/bot-handler
-      Runtime: nodejs4.3
-      MemorySize: 256
-      Timeout: 20
-      Handler: index.handler
-      Policies:
-        Statement:
-          - Effect: Allow
-            Action:
-              - dynamodb:*
-            Resource:
-              - "*"
-      Environment:
-        Variables:
-          USER_DDB_TABLE: !Ref UsersDDBTable
-          USER_DDB_TABLE_PHONE_INDEX: "phoneindex"
-          USER_PLAN_DDB_TABLE: !Ref UserTravelPlansDDBTable
-          PLAN_CATALOGUE_DDB_TABLE: !Ref TravelPlanCatalogDDBTable
+  # BotHandlerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Description: "Lambda handler for travel plan bot"
+  #     FunctionName: !Sub "${AWS::StackName}-LexBotHandler"
+  #     CodeUri: ../lambda-functions/bot-handler
+  #     Runtime: nodejs4.3
+  #     MemorySize: 256
+  #     Timeout: 20
+  #     Handler: index.handler
+  #     Policies:
+  #       Statement:
+  #         - Effect: Allow
+  #           Action:
+  #             - dynamodb:*
+  #           Resource:
+  #             - "*"
+  #     Environment:
+  #       Variables:
+  #         USER_DDB_TABLE: !Ref UsersDDBTable
+  #         USER_DDB_TABLE_PHONE_INDEX: "phoneindex"
+  #         USER_PLAN_DDB_TABLE: !Ref UserTravelPlansDDBTable
+  #         PLAN_CATALOGUE_DDB_TABLE: !Ref TravelPlanCatalogDDBTable
 
 #  CognitoTriggerFunction:
 #    Type: AWS::Serverless::Function
@@ -115,7 +96,7 @@ Resources:
     Properties:
       Description: "Lambda function to load the plan catalog."
       CodeUri: ../lambda-functions/load-data
-      Runtime: nodejs4.3
+      Runtime: nodejs8.10
       MemorySize: 256
       Timeout: 20
       Handler: index.handler
@@ -125,11 +106,15 @@ Resources:
             Action:
               - dynamodb:*
             Resource:
-              !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TravelPlanCatalogDDBTable}"
+              - '*'
       Environment:
         Variables:
-          PLAN_CATALOGUE_DDB_TABLE: !Ref TravelPlanCatalogDDBTable
-
+          OPERATOR_DDB_TABLE:
+            Ref: OperatorDDBTable
+          WELL_SITE_LOCATION_DDB_TABLE:
+            Ref: WellsiteLocationDDBTable
+          WELL_SITE_VISIT_DDB_TABLE:
+            Ref: WellsiteVisitDDBTable
 
   LoadPlanData:
     Properties:

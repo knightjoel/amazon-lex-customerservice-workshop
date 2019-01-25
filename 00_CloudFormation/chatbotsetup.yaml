@@ -1,35 +1,35 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: resources to make up lex bot
 Resources:
-  # BotHandlerFunction:
-  #   Properties:
-  #     CodeUri: s3://nal-chatbot-201902/chatbotlambda.zip
-  #     Description: Lambda handler for travel plan bot
-  #     Environment:
-  #       Variables:
-  #         OPERATOR_DDB_TABLE:
-  #           Ref: OperatorDDBTable
-  #         WELL_SITE_LOCATION_DDB_TABLE:
-  #           Ref: WellsiteLocationDDBTable
-  #         WELL_SITE_VISIT_DDB_TABLE:
-  #           Ref: WellsiteVisitDDBTable
-  #     FunctionName:
-  #       Fn::Sub: ${AWS::StackName}-LexBotHandler
-  #     Handler: index.handler
-  #     MemorySize: 256
-  #     Policies:
-  #       Statement:
-  #       - Action:
-  #         - dynamodb:*
-  #         Effect: Allow
-  #         Resource:
-  #         - '*'
-  #     Runtime: python3.7
-  #     Timeout: 20
-  #   Type: AWS::Serverless::Function
+  BotHandlerFunction:
+    Properties:
+      CodeUri: s3://aws-chatbot-201902/lambda_function.zip
+      Description: Lambda handler for chatbot
+      Environment:
+        Variables:
+          OPERATOR_DDB_TABLE:
+            Ref: OperatorDDBTable
+          WELL_SITE_LOCATION_DDB_TABLE:
+            Ref: WellsiteLocationDDBTable
+          WELL_SITE_VISIT_DDB_TABLE:
+            Ref: WellsiteVisitDDBTable
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-LexBotHandler
+      Handler: lambda_function.lambda_handler
+      MemorySize: 256
+      Policies:
+        Statement:
+        - Action:
+          - dynamodb:*
+          Effect: Allow
+          Resource:
+          - '*'
+      Runtime: python2.7
+      Timeout: 20
+    Type: AWS::Serverless::Function
   DataLoaderFunction:
     Properties:
-      CodeUri: s3://nal-chatbot-201902/chatbotdataload.zip
+      CodeUri: s3://aws-chatbot-201902/chatbotdataload.zip
       Description: Lambda function to load the data catalog.
       Environment:
         Variables:

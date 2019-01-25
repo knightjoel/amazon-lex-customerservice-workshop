@@ -1,0 +1,38 @@
+[
+  {
+    "wellSiteId": "04-34-026-03W5",
+    "rodCondition": "new",
+    "rodReplacementDate": "2019-01-02 12:12:12",
+    "rodReplacedBy": "michael",
+    "fluidLevel": "46",
+    "fluidLevelCheckedDate": "2019-01-02 12:12:12",
+    "fluidLevelCheckedBy": "michael",
+    "dateOfLastVisit": "2019-01-02 12:12:12",
+    "durationOfLastVisit": "4.5",
+    "comments": "it was 20 below and i nearly froze as i replaced the rod"
+  },
+  {
+    "wellSiteId": "06-21-026-03W5",
+    "rodCondition": "fair",
+    "rodReplacementDate": "2017-04-04 17:12:17",
+    "rodReplacedBy": "joel",
+    "fluidLevel": "87",
+    "fluidLevelCheckedDate": "2018-11-13 13:13:13",
+    "fluidLevelCheckedBy": "joel",
+    "dateOfLastVisit": "2018-11-13 13:13:13",
+    "durationOfLastVisit": "2.5",
+    "comments": "evidence of gophers trying to invade the compound.  called pest control"
+  },
+  {
+    "wellSiteId": "01-01-001-01W5",
+    "rodCondition": "poor",
+    "rodReplacementDate": "2015-02-02 10:10:10",
+    "rodReplacedBy": "xavier",
+    "fluidLevel": "23",
+    "fluidLevelCheckedDate": "2018-12-12 12:12:12",
+    "fluidLevelCheckedBy": "xavier",
+    "dateOfLastVisit": "2018-12-12 12:12:12",
+    "durationOfLastVisit": "1.5",
+    "comments": "rod will need to be replaced at next visit.  the sunrise was gorgeous today."
+  }
+]

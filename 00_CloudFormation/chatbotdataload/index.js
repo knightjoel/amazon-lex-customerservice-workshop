@@ -23,6 +23,7 @@ exports.handler = function (event, context, callback) {
 
     loadData('operatorData.json',operatorDdbTable);
     loadData('wellsiteLocationData.json',wellsiteLocationDdbTable);
+    loadData('wellsiteVisitData.json',wellsiteVisitDdbTable);
 
     response.send(event, context, response.SUCCESS, {});
 
