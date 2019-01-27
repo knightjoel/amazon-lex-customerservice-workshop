@@ -9,6 +9,7 @@
     "fluidLevelCheckedBy": "michael",
     "dateOfLastVisit": "2019-01-02 12:12:12",
     "durationOfLastVisit": "4.5",
+    "operatorOfLastVisit": "michael",
     "comments": "it was 20 below and i nearly froze as i replaced the rod"
   },
   {
@@ -21,6 +22,7 @@
     "fluidLevelCheckedBy": "joel",
     "dateOfLastVisit": "2018-11-13 13:13:13",
     "durationOfLastVisit": "2.5",
+    "operatorOfLastVisit": "joel",
     "comments": "evidence of gophers trying to invade the compound.  called pest control"
   },
   {
@@ -33,6 +35,7 @@
     "fluidLevelCheckedBy": "xavier",
     "dateOfLastVisit": "2018-12-12 12:12:12",
     "durationOfLastVisit": "1.5",
+    "operatorOfLastVisit": "xavier",
     "comments": "rod will need to be replaced at next visit.  the sunrise was gorgeous today."
   }
 ]
