@@ -556,7 +556,7 @@ def comments(intent_request):
     
 
     # create the response message
-    msg = 'the well was visited on {} and operator commented {}'.format(wellsite_visit_record['dateOfLastVisit'], wellsite_visit_record['comments'] )
+    msg = 'the well was visited on {} and {} commented {}'.format(wellsite_visit_record['dateOfLastVisit'], wellsite_visit_record['operatorOfLastVisit'], wellsite_visit_record['comments'] )
     logger.debug('production_stats msg={}'.format(msg))
     logger.debug('session={}'.format(session_attributes))
     
@@ -778,6 +778,7 @@ def wellsite_visit(intent_request):
     # we should have rod replacement stored in session
     if 'rod_replaced' in session_attributes:
         rod_replaced = session_attributes['rod_replaced']
+        logger.debug('session rod_replaced={}'.format(rod_replaced))
     
     if 'wellsiteId' in slots:
         wellsite_id = slots['wellsiteId']
@@ -825,7 +826,9 @@ def wellsite_visit(intent_request):
     # create a new wellsite visit record
     wellsite_visit_record = new_wellsite_visit_record(wellsite_id)
     wellsite_visit_record['rodCondition'] = rod_condition
-    if rod_replaced is True:
+    logger.debug('creating wellsite visit record rod_replaced={}'.format(rod_replaced))
+
+    if rod_replaced == 'true':
         wellsite_visit_record['rodReplacementDate'] = curTimestamp
         wellsite_visit_record['rodReplacedBy'] = operator_name
     else:
