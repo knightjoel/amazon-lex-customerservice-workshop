@@ -2,7 +2,7 @@
 
 Amazon Lex allows you to quickly and easily build sophisticated, natural language, chatbots.
 
-In this workshop, you will build a field service chatbot for a fictitious
+In this workshop, you will build a field service chatbot for Octank Energy Services, a fictitious
 energy company. They want to make it really easy for their field operators to
 get and update information about well sites that they visit.
 
