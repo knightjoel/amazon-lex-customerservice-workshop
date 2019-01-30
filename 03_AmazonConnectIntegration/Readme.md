@@ -9,7 +9,7 @@ To achieve this you will create a contact center, configure a simple call flow, 
 Each of the following sections provide an implementation overview and detailed, step-by-step instructions. The overview should provide enough context for you to complete the implementation if you're already familiar with the AWS Management Console or if you want to explore the services yourself without following a walkthrough.
 
 ### Create a new Amazon Conect instance
-Go to the [Amazon Connect Console](https://console.aws.amazon.com/connect/home?region=us-east-1) to create a new virtual contact center instance in the us-east-1 (Virgina) region.
+Go to the [Amazon Connect Console](https://console.aws.amazon.com/connect/home?region=us-west-2) to create a new virtual contact center instance in the us-west-2 (Oregon) region.
 
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
@@ -142,7 +142,7 @@ In this last step we are enhancing the customer input configuration of the conta
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. Re-open the CCM app; within the [Amazon Connect console](https://console.aws.amazon.com/connect/home?region=us-east-1) select **Overview** and **Login as administrator**
+1. Re-open the CCM app; within the [Amazon Connect console](https://console.aws.amazon.com/connect/home?region=us-west-2) select **Overview** and **Login as administrator**
 
 1. On the left hand navigation select **Routing** (third icon) - **Contact flows**
 
