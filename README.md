@@ -1,10 +1,12 @@
-# Build a customer service chatbot with Amazon Lex
+# Build a field service chatbot with Amazon Lex
 
-Amazon Lex allows you to quickly and easily build sophisticated, natural language, customer service chatbots. 
+Amazon Lex allows you to quickly and easily build sophisticated, natural language, chatbots.
 
-In this workshop, you will build a customer service chatbot for a fictitious telco company. They want to make it really easy for their customers to add an international plan to their existing phone account when their customers travel abroad for business and vacation. 
+In this workshop, you will build a field service chatbot for Octank Energy Services, a fictitious
+energy company. They want to make it really easy for their field operators to
+get and update information about well sites that they visit.
 
-The application architecture uses [Amazon Lex](https://aws.amazon.com/lex/), [AWS Lambda](https://aws.amazon.com/lambda/) and [Amazon DynamoDB](https://aws.amazon.com/dynamodb/). You will build an Amazon Lex chatbot that understands customers' speech or text inputs. Data about available plans and user's chosen plans are persisted in DynamoDB. AWS lambda functions get triggered by Amazon Lex to execute business logic and interact with the DB layer. You can then connect the Lex chatbot with twilio SMS, which allows users to access your bot over SMS text messages; or Amazon Connect, which allows users to call your customer service number and interact with AI through voice.  
+The application architecture uses [Amazon Lex](https://aws.amazon.com/lex/), [AWS Lambda](https://aws.amazon.com/lambda/) and [Amazon DynamoDB](https://aws.amazon.com/dynamodb/). You will build an Amazon Lex chatbot that understands operators' speech or text inputs. Data about well sites is persisted in DynamoDB. AWS Lambda functions get triggered by Amazon Lex to execute business logic and interact with the database layer. You can then connect the Lex chatbot with twilio SMS, which allows users to access your bot over SMS text messages; or Amazon Connect, which allows users to call a phone number and interact with the bot through voice.
 
 See the diagram below for a depiction of the complete architecture.
 

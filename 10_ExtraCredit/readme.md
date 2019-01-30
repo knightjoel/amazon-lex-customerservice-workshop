@@ -14,11 +14,11 @@ Why not add more channels your customer can use to reach your customer service? 
 
 * **Slack**
 	
-	See guide [here](http://docs.aws.amazon.com/lex/latest/dg/slack-bot-association.html) on integrating your Lex bot with Slack
+	See guide [here](https://docs.aws.amazon.com/lex/latest/dg/slack-bot-association.html) on integrating your Lex bot with Slack
 	
 * **Amazon Alexa Skill**
 
- 	See guide [here](http://docs.aws.amazon.com/lex/latest/dg/export.html) on exporting your Lex bot to an Alexa skill. 
+ 	See guide [here](https://docs.aws.amazon.com/lex/latest/dg/export-to-alexa.html) on exporting your Lex bot to an Alexa skill. 
  	
 * **Kik Messenger** 
  
