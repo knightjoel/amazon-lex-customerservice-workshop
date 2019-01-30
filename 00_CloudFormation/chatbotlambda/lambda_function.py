@@ -17,6 +17,7 @@ import logging
 import re
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
+import random
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -88,7 +89,7 @@ def retrieve_operator_record(operatorName):
     table = dynamodb.Table(tablename)
     response = table.get_item(
         Key={
-            'operatorName': operatorName
+            'operatorName': operatorName.lower()
         }
     )
     if 'Item' in response:
@@ -103,7 +104,7 @@ def retrieve_wellsite_location_record(wellsiteId):
     table = dynamodb.Table(tablename)
     response = table.get_item(
         Key={
-            'wellSiteId': wellsiteId
+            'wellSiteId': wellsiteId.upper()
         }
     )
     if 'Item' in response:
@@ -117,7 +118,7 @@ def retrieve_wellsite_visit_record(wellsiteId):
     logger.debug('table={}'.format(tablename))
     table = dynamodb.Table(tablename)
     response = table.query(
-        KeyConditionExpression=Key('wellSiteId').eq(wellsiteId)
+        KeyConditionExpression=Key('wellSiteId').eq(wellsiteId.upper())
     )
     #response = table.get_item(
     #    Key={
@@ -274,9 +275,19 @@ def production_stats(intent_request):
             )
         session_attributes['wellsiteLocationRecord'] = json.dumps(wellsite_location_record)
 
+    # in a real situation, we would query the production records
+    # instead, we will randomly assign a value
+    baseOilProduction = safe_int(wellsite_location_record['oilProductionRate'])
+    baseWaterProduction = safe_int(wellsite_location_record['waterProductionRate'])
+
+    multiplier = 100 + random.randint(0,25)
+    actualOilProduction = baseOilProduction * multiplier / 100
+
+    #multiplier = 100 + random.randint(0,25)
+    actualWaterProduction = baseWaterProduction * multiplier / 100
 
     # create the response message
-    msg = 'Current production is {} barrels of oil and {} barrels of water'.format(wellsite_location_record['oilProductionRate'], wellsite_location_record['waterProductionRate'])
+    msg = 'Current production is {} barrels of oil and {} barrels of water.  That is {}% above expectation'.format(actualOilProduction, actualWaterProduction, multiplier-100)
     logger.debug('production_stats msg={}'.format(msg))
     logger.debug('session={}'.format(session_attributes))
     
@@ -459,7 +470,11 @@ def rod_replacement(intent_request):
     
 
     # create the response message
-    msg = '{} replaced the rod on {}'.format(wellsite_visit_record['rodReplacedBy'], wellsite_visit_record['rodReplacementDate'], wellsite_visit_record['fluidLevelCheckedDate'])
+    msg = ''
+    if wellsite_visit_record['rodReplacedBy'] == ' ':
+        msg = 'rod was not replaced on last visit'
+    else:
+        msg = '{} replaced the rod on {}'.format(wellsite_visit_record['rodReplacedBy'], wellsite_visit_record['rodReplacementDate'], wellsite_visit_record['fluidLevelCheckedDate'])
     logger.debug('production_stats msg={}'.format(msg))
     logger.debug('session={}'.format(session_attributes))
     
@@ -546,6 +561,89 @@ def comments(intent_request):
         }
     )
 
+
+def add_comments(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+    # extract wellsite slot value
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
+
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+
+    # load the wellsite visit record
+    wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+        
+    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+        
+        if wellsite_visit_record is None:
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(wellsite_id)}
+            )
+        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
+
+    # we have the last visit record.  now update the comments field
+    input_transcript = intent_request['inputTranscript']
+    logger.debug('input_transcript={}'.format(input_transcript))
+    comment = slots['comments']
+    wellsite_visit_record['comments'] = comment
+    addWellsiteVisitRecordToDynamo(wellsite_visit_record)
+    session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+
+    # create the response message
+    msg = 'your comments have been added for well {}'.format(wellsite_id)
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+
 def new_wellsite_visit_record(wellsiteId):
     wellsite_visit_record = {
         'wellSiteId': wellsiteId,
@@ -557,6 +655,7 @@ def new_wellsite_visit_record(wellsiteId):
         'fluidLevelCheckedBy': ' ',
         'dateOfLastVisit': ' ',
         'durationOfLastVisit': ' ',
+        'operatorOfLastVisit' : ' ',
         'comments': ' '
     }
     return wellsite_visit_record
@@ -574,10 +673,63 @@ def wellsite_visit(intent_request):
     logger.debug('intent={}'.format(intent_request['currentIntent']))
     logger.debug('start session={}'.format(intent_request['sessionAttributes']))
     slots = intent_request['currentIntent']['slots']
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    invocation_source = intent_request['invocationSource']
+
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
-    # extract wellsite slot value
-    wellsite_id = ''
+
+    # extract slot values -> will be used for validation and eventually storage
+    # TODO: do we need to confirm that slots exist?
+    wellsite_id = slots['wellsiteId']
+    operator_name = slots['operatorName']
+    time_on_site = slots['timeOnSite']
+    rod_condition = slots['rodCondition']
+    fluid_level = slots['fluidLevel']
+    rod_replaced = False
+    curTimestamp = '2019-02-02 2:02:02'
+
+
+    if invocation_source == 'DialogCodeHook':
+        logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
+        if confirmation_status == 'Denied':
+            # update rod status as not replaced
+            # mark everything as good -> we can then move on to processing the utterance
+            rod_replaced = False
+            session_attributes['rod_replaced'] = rod_replaced
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'Confirmed':
+            # update rod status as replaced
+            rod_replaced = True
+            session_attributes['rod_replaced'] = rod_replaced
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'None':
+            if wellsite_id and operator_name and time_on_site and rod_condition and fluid_level:
+                # we have all the values.  now send confirmation to ask if rod was replaced
+                return confirm_intent(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        {
+                            'wellsiteId': wellsite_id,
+                            'operatorName': operator_name,
+                            'timeOnSite': time_on_site,
+                            'rodCondition': rod_condition,
+                            'fluidLevel': fluid_level
+                        },
+                        {
+                            'contentType': 'PlainText',
+                            'content': 'Did you replace the rod?'
+                        }
+                    )
+            # let normal processing handle whether the slots are specified
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+            
+    # we should have rod replacement stored in session
+    if 'rod_replaced' in session_attributes:
+        rod_replaced = session_attributes['rod_replaced']
     
     if 'wellsiteId' in slots:
         wellsite_id = slots['wellsiteId']
@@ -620,30 +772,30 @@ def wellsite_visit(intent_request):
         session_attributes['wellsiteLocationRecord'] = json.dumps(wellsite_location_record)
 
 
-    # extract and validate each slot
-    operator_name = slots['operatorName']
-    time_on_site = slots['timeOnSite']
-    rod_condition = slots['rodCondition']
-    fluid_level = slots['fluidLevel']
-    curTimestamp = '2019-02-02 2:02:02'
 
     # create a new wellsite visit record
     wellsite_visit_record = new_wellsite_visit_record(wellsite_id)
     wellsite_visit_record['rodCondition'] = rod_condition
-    wellsite_visit_record['rodReplacementDate'] = ' '
-    wellsite_visit_record['rodReplacedBy'] = ' '
+    if rod_replaced is True:
+        wellsite_visit_record['rodReplacementDate'] = curTimestamp
+        wellsite_visit_record['rodReplacedBy'] = operator_name
+    else:
+        wellsite_visit_record['rodReplacementDate'] = ' '
+        wellsite_visit_record['rodReplacedBy'] = ' '
+
     wellsite_visit_record['fluidLevel'] = fluid_level
     wellsite_visit_record['fluidLevelCheckedDate'] = curTimestamp
     wellsite_visit_record['fluidLevelCheckedBy'] = operator_name
     wellsite_visit_record['dateOfLastVisit'] = curTimestamp
     wellsite_visit_record['durationOfLastVisit'] = time_on_site
+    wellsite_visit_record['operatorOfLastVisit'] = operator_name
     wellsite_visit_record['comments'] = ' '
     addWellsiteVisitRecordToDynamo(wellsite_visit_record)
     session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
     
 
     # create the response message
-    msg = 'thank-you {} the information has been saved'.format(operator_name)
+    msg = 'thank-you {} the information has been saved.  Please remember to add further comments.'.format(operator_name)
     logger.debug('production_stats msg={}'.format(msg))
     logger.debug('session={}'.format(session_attributes))
     
@@ -680,6 +832,8 @@ def dispatch(intent_request):
         return comments(intent_request)
     elif intent_name == 'WellsiteVisit':
         return wellsite_visit(intent_request)
+    elif intent_name == 'AddComments':
+        return add_comments(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
