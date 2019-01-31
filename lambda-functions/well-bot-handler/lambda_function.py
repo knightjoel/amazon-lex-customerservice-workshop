@@ -233,33 +233,10 @@ def production_stats(intent_request):
     logger.debug('intent={}'.format(intent_request['currentIntent']))
     logger.debug('start session={}'.format(intent_request['sessionAttributes']))
     slots = intent_request['currentIntent']['slots']
-    wellsite_id = ''
-    
-    if 'wellsiteId' in slots:
-        wellsite_id = slots['wellsiteId']
-
-    confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    if not wellsite_id:
-        logger.debug('wellsiteid is not specified.  retrieving from session')
-        if 'wellsiteId' in session_attributes:
-            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
 
-
-    # Validate our slot values.  If any are invalid, re-elicit for their value
-    validation_result = validate_wellsiteid(wellsite_id)
-    if validation_result['isValid']:
-        session_attributes['wellsiteId'] = wellsite_id
-    else:
-        slots[validation_result['violatedSlot']] = None
-        return elicit_slot(
-            session_attributes,
-            intent_request['currentIntent']['name'],
-            slots,
-            validation_result['violatedSlot'],
-            validation_result['message']
-        )
-
+    wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+    logger.debug('wellsiteid={}'.format(wellsite_id))
 
     # load the wellsite visit record
     wellsite_location_record = retrieve_from_session(session_attributes, 'wellsiteLocationRecord')
@@ -306,39 +283,6 @@ def production_stats(intent_request):
     )
 
 
-def session_details(intent_request):
-    """
-    Performs dialog management for retrieving information stored in session.
-
-    Beyond data retrieval, the implementation for this intent demonstrates the following:
-    1) Use of elicitSlot in slot validation and re-prompting
-    2) Use of sessionAttributes to pass information that can be used to guide conversation
-    """
-    logger.debug('intent={}'.format(intent_request['currentIntent']))
-    logger.debug('session={}'.format(intent_request['sessionAttributes']))
-    slots = intent_request['currentIntent']['slots']
-
-    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-
-    msg = 'Session is empty'
-    if ( len(session_attributes.keys() )):
-        msg = 'Session contains '
-        for key in session_attributes:
-            msg += key + ','
-
-
-
-    # create the response message
-    logger.debug('session_details msg={}'.format(msg))
-    
-    return close(
-        session_attributes,
-        'Fulfilled',
-        {
-            'contentType': 'PlainText',
-            'content': msg
-        }
-    )
 
 def fluid_level(intent_request):
     """
@@ -353,54 +297,19 @@ def fluid_level(intent_request):
     slots = intent_request['currentIntent']['slots']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
-    # extract wellsite slot value
-    wellsite_id = ''
-    
-    if 'wellsiteId' in slots:
-        wellsite_id = slots['wellsiteId']
-
-    if not wellsite_id:
-        logger.debug('wellsiteid is not specified.  retrieving from session')
-        if 'wellsiteId' in session_attributes:
-            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
-
-
-    # Validate our slot values.  If any are invalid, re-elicit for their value
-    validation_result = validate_wellsiteid(wellsite_id)
-    if validation_result['isValid']:
-        session_attributes['wellsiteId'] = wellsite_id
-    else:
-        slots[validation_result['violatedSlot']] = None
-        return elicit_slot(
-            session_attributes,
-            intent_request['currentIntent']['name'],
-            slots,
-            validation_result['violatedSlot'],
-            validation_result['message']
-        )
-
-
     # load the wellsite visit record
     wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
-        
-    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
-        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
-        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
-
-        
-        if wellsite_visit_record is None:
-            msgId = wellsite_id.replace('-', ' dash ')
-            return elicit_slot(
+    if wellsite_visit_record is None:
+        return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
-                slots,
+                intent_request['currentIntent']['slots'],
                 'wellsiteId',
-                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(msgId)}
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Could not find your wellsite in our database.  Please tell me your wellsite id.'
+                }
             )
-        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
-    
-
-
 
     # create the response message
     msg = '{} reported a fluid level of {} on {}'.format(wellsite_visit_record['fluidLevelCheckedBy'], wellsite_visit_record['fluidLevel'], wellsite_visit_record['fluidLevelCheckedDate'])
@@ -429,52 +338,19 @@ def rod_replacement(intent_request):
     slots = intent_request['currentIntent']['slots']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
-    # extract wellsite slot value
-    wellsite_id = ''
-    
-    if 'wellsiteId' in slots:
-        wellsite_id = slots['wellsiteId']
-
-    if not wellsite_id:
-        logger.debug('wellsiteid is not specified.  retrieving from session')
-        if 'wellsiteId' in session_attributes:
-            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
-
-
-    # Validate our slot values.  If any are invalid, re-elicit for their value
-    validation_result = validate_wellsiteid(wellsite_id)
-    if validation_result['isValid']:
-        session_attributes['wellsiteId'] = wellsite_id
-    else:
-        slots[validation_result['violatedSlot']] = None
-        return elicit_slot(
-            session_attributes,
-            intent_request['currentIntent']['name'],
-            slots,
-            validation_result['violatedSlot'],
-            validation_result['message']
-        )
-
-
     # load the wellsite visit record
     wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
-        
-    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
-        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
-        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
-
-        
-        if wellsite_visit_record is None:
-            msgId = wellsite_id.replace('-',' dash ')
-            return elicit_slot(
+    if wellsite_visit_record is None:
+        return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
-                slots,
+                intent_request['currentIntent']['slots'],
                 'wellsiteId',
-                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(msgId)}
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Could not find your wellsite in our database.  Please tell me your wellsite id.'
+                }
             )
-        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
-    
 
     # create the response message
     msg = ''
@@ -504,56 +380,21 @@ def comments(intent_request):
     2) Use of sessionAttributes to pass information that can be used to guide conversation
     """
     logger.debug('intent={}'.format(intent_request['currentIntent']))
-    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
-    slots = intent_request['currentIntent']['slots']
+    logger.debug('session={}'.format(intent_request['sessionAttributes']))
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
-    # extract wellsite slot value
-    wellsite_id = ''
-    
-    if 'wellsiteId' in slots:
-        wellsite_id = slots['wellsiteId']
-
-    if not wellsite_id:
-        logger.debug('wellsiteid is not specified.  retrieving from session')
-        if 'wellsiteId' in session_attributes:
-            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
-
-
-    # Validate our slot values.  If any are invalid, re-elicit for their value
-    validation_result = validate_wellsiteid(wellsite_id)
-    if validation_result['isValid']:
-        session_attributes['wellsiteId'] = wellsite_id
-    else:
-        slots[validation_result['violatedSlot']] = None
-        return elicit_slot(
-            session_attributes,
-            intent_request['currentIntent']['name'],
-            slots,
-            validation_result['violatedSlot'],
-            validation_result['message']
-        )
-
-
-    # load the wellsite visit record
     wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
-        
-    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
-        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
-        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
-
-        
-        if wellsite_visit_record is None:
-            msgId = wellsite_id.replace('-',' dash ')
-            return elicit_slot(
+    if wellsite_visit_record is None:
+        return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
-                slots,
+                intent_request['currentIntent']['slots'],
                 'wellsiteId',
-                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(msgId)}
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Could not find your wellsite in our database.  Please tell me your wellsite id.'
+                }
             )
-        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
-    
 
     # create the response message
     msg = 'the well was visited on {} and {} commented {}'.format(wellsite_visit_record['dateOfLastVisit'], wellsite_visit_record['operatorOfLastVisit'], wellsite_visit_record['comments'] )
@@ -568,6 +409,7 @@ def comments(intent_request):
             'content': msg
         }
     )
+
 
 
 def add_comments(intent_request):
@@ -874,35 +716,14 @@ def validate_wellsiteid_from_lex(intent_request):
 
 
     # extract slot values -> will be used for validation and eventually storage
+    wellsite_id = ' '
     wellsite_id = slots['wellsiteId']
 
 
     if invocation_source == 'DialogCodeHook':
         logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
-        if confirmation_status == 'Denied':
-            # update rod status as not replaced
-            # mark everything as good -> we can then move on to processing the utterance
-            rod_replaced = False
-            session_attributes['wellsite_confirmed'] = rod_replaced
-            return elicit_slot(
-                session_attributes,
-                intent_request['currentIntent']['name'],
-                slots,
-                'wellsiteId',
-                {
-                    'contentType': 'PlainText',
-                    'content': 'Please specify the wellsite id'
-                }
-            )
-            #return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
-        elif confirmation_status == 'Confirmed':
-            # update rod status as replaced
-            rod_replaced = True
-            session_attributes['wellsite_confirmed'] = rod_replaced
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-        elif confirmation_status == 'None':
+        if confirmation_status == 'None':
             if wellsite_id :
                 if '-' in wellsite_id:
                     msgId = wellsite_id.replace('-', ' dash ')
@@ -921,16 +742,31 @@ def validate_wellsiteid_from_lex(intent_request):
                 nltk_tokens = wellsite_id.split()
                 wellsite_tokens = []
                 for token in nltk_tokens:
-                    if token.isdigit() : #or token[0] == 'w' or token[0] == 'W'
-                        logger.debug('found token'.format(token))
+                    if token.isdigit(): 
+                        logger.debug('found number token'.format(token))
                         wellsite_tokens.append(int(token))
+                    elif len(token) > 0 and token[0].upper() == 'W':
+                        logger.debug('found W# token'.format(token))
+                        wellsite_tokens.append(token)
+
                 wellsite_id = ''
-                if len(wellsite_tokens) >= 4:
-                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}W5'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3])
+                if len(wellsite_tokens) >= 5:
+                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}{}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3],wellsite_tokens[4])
+                elif len(wellsite_tokens) > 0:
+                    return elicit_slot(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        slots,
+                        'wellsiteId',
+                        {
+                            'contentType': 'PlainText',
+                            'content': 'Please specify wellsite id in the format 1 dash 1 dash 1 dash 1 W5'
+                        }
+                    )
                 else:
                     return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
-                logger.debug('created wellsiteid {}'.format(wellsite_id))
+                logger.debug('transformed wellsiteid {}'.format(wellsite_id))
                 
                 # we have all the values.  now send confirmation to ask if rod was replaced
                 slots['wellsiteId'] = wellsite_id
@@ -940,11 +776,77 @@ def validate_wellsiteid_from_lex(intent_request):
                         slots,
                         {
                             'contentType': 'PlainText',
-                            'content': 'Is this the correct wellsite id? {} dash {} dash {} dash {} {}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3], 'w5')
+                            'content': 'Is this the correct wellsite id? {} dash {} dash {} dash {} {}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3], wellsite_tokens[4])
                         }
                     )
-            # let normal processing handle whether the slots are specified
+            else:
+                # let normal processing handle whether the slots are specified
+                return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'Denied':
+            # The user indicated the wellsite id was incorrect -> requery for new slot value
+            session_attributes['wellsiteid_confirmed'] = False
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Ok. Pleae tell me your new wellsite id.'
+                }
+            )
+
+        elif confirmation_status == 'Confirmed':
+            # user has confirmed the wellsite id is correct
+            # the wellsite id is now in the format 01-01-001-01W5
+            # TODO: improve the wellsiteId format!
+            session_attributes['wellsiteid_confirmed'] = True
+
+            # Now check that the wellsite id is valid
+            if not wellsite_id:
+                logger.debug('wellsiteid is not specified.  retrieving from session')
+                if 'wellsiteId' in session_attributes:
+                    wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+            # Validate our slot values.  If any are invalid, re-elicit for their value
+            validation_result = validate_wellsiteid(wellsite_id)
+            if validation_result['isValid']:
+                session_attributes['wellsiteId'] = wellsite_id
+            else:
+                slots[validation_result['violatedSlot']] = None
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    validation_result['violatedSlot'],
+                    validation_result['message']
+                )
+
+
+            # load the wellsite visit record
+            wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+                
+            if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+                logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+                wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+                if wellsite_visit_record is None:
+                    msgId = wellsite_id.replace('-',' dash ')
+                    slots['wellsiteId'] = ''
+                    return elicit_slot(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        slots,
+                        'wellsiteId',
+                        {   'contentType': 'PlainText', 
+                        'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(msgId)}
+                    )
+                session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+            
             return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        
 
     return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
@@ -968,10 +870,8 @@ def validate_comments(intent_request):
     if invocation_source == 'DialogCodeHook':
         logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
         if confirmation_status == 'Denied':
-            # update rod status as not replaced
-            # mark everything as good -> we can then move on to processing the utterance
-            rod_replaced = False
-            session_attributes['wellsite_confirmed'] = rod_replaced
+            # user rejected the id
+            session_attributes['wellsiteid_confirmed'] = False
             return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
@@ -986,8 +886,7 @@ def validate_comments(intent_request):
 
         elif confirmation_status == 'Confirmed':
             # update rod status as replaced
-            rod_replaced = True
-            session_attributes['wellsite_confirmed'] = rod_replaced
+            session_attributes['wellsiteid_confirmed'] = True
             return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
         elif confirmation_status == 'None':
@@ -1046,7 +945,7 @@ def dispatch(intent_request):
     Called when the user specifies an intent for this bot.
     """
 
-    logger.debug('dispatch userId={}, intentName={}'.format(intent_request['userId'], intent_request['currentIntent']['name']))
+    logger.debug('dispatch intentName={}, userId={}'.format(intent_request['currentIntent']['name'], intent_request['userId']))
 
     intent_name = intent_request['currentIntent']['name']
     invocation_source = intent_request['invocationSource']
@@ -1057,8 +956,6 @@ def dispatch(intent_request):
             return validate_wellsiteid_from_lex(intent_request)
         else:
             return production_stats(intent_request)
-    elif intent_name == 'GetSessionDetails':
-        return session_details(intent_request)
     elif intent_name == 'GetFluidLevel':
         if invocation_source == 'DialogCodeHook':
             return validate_wellsiteid_from_lex(intent_request)
@@ -1081,8 +978,7 @@ def dispatch(intent_request):
             return validate_comments(intent_request)
         else:
             return add_comments(intent_request)
-        #return add_comments(intent_request)
-
+    
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
 
