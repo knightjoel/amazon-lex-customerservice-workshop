@@ -24,16 +24,8 @@ In order to complete this workshop you'll need an AWS Account with sufficient pe
 This workshop is broken up into multiple modules. For building out your Lex chatbot, you must complete the following module in order before proceeding to the next:
 
 1. [Build a Lex chatbot and handle informational queries](01_LexBotInformational)
-1. [Handle customer requests to subscribe to services](02_LexBotSubscribeService)
-
-Once you have a working Lex chatbot, you can choose to complete one or more of the following modules to integrate your Lex chatbot to different channels to interface with your customer:
-
-* [Integrate Lex chatbot with Amazon Connect (voice over the phone)](03_AmazonConnectIntegration)
-* [Integrate Lex chatbot with Twilio SMS (text over SMS)](04_TwilioSMSIntegration)
-
-Extra credit ideas:
-
-* [Extra credit](10_ExtraCredit)
+1. [Integrate Lex chatbot with Amazon Connect (voice over the phone)](03_AmazonConnectIntegration)
+1. [Create the "site visit" intent](05_SiteVisit)
 
 Resource cleanup:
 
