@@ -14,6 +14,11 @@ import time
 import os
 import dateutil.parser
 import logging
+import re
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+import random
+#import ntlk
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -71,6 +76,68 @@ def delegate(session_attributes, slots):
 
 
 # --- Helper Functions ---
+def retrieve_from_session(session, key):
+    value = None
+    if key in session:
+        logger.debug('looking for record={} in session'.format(key))
+        value = json.loads(session[key])
+    return value
+
+def retrieve_operator_record(operatorName):
+    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+    tablename = os.environ['OPERATOR_DDB_TABLE']
+    logger.debug('table={}'.format(tablename))
+    table = dynamodb.Table(tablename)
+    response = table.get_item(
+        Key={
+            'operatorName': operatorName.lower()
+        }
+    )
+    if 'Item' in response:
+        return response['Item']
+    else:
+        return None
+
+def retrieve_wellsite_location_record(wellsiteId):
+    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+    tablename = os.environ['WELL_SITE_LOCATION_DDB_TABLE']
+    logger.debug('table={}'.format(tablename))
+    table = dynamodb.Table(tablename)
+    response = table.get_item(
+        Key={
+            'wellSiteId': wellsiteId.upper()
+        }
+    )
+    if 'Item' in response:
+        return response['Item']
+    else:
+        return None
+
+def retrieve_wellsite_visit_record(wellsiteId):
+    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+    tablename = os.environ['WELL_SITE_VISIT_DDB_TABLE']
+    logger.debug('table={}'.format(tablename))
+    table = dynamodb.Table(tablename)
+    response = table.query(
+        KeyConditionExpression=Key('wellSiteId').eq(wellsiteId.upper())
+    )
+    #response = table.get_item(
+    #    Key={
+    #        'wellSiteId': wellsiteId
+    #    }
+    #)
+    if response['Count'] == 0:
+        return None
+    else:
+        return response['Items'][0]
+
+def addWellsiteVisitRecordToDynamo(wellsite_visit_record):
+    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+    tablename = os.environ['WELL_SITE_VISIT_DDB_TABLE']
+    logger.debug('table={}'.format(tablename))
+    table = dynamodb.Table(tablename)
+    logger.debug('item={}'.format(wellsite_visit_record))
+    table.put_item(Item=wellsite_visit_record)
 
 
 def safe_int(n):
@@ -80,6 +147,7 @@ def safe_int(n):
     if n is not None:
         return int(n)
     return n
+
 
 
 def try_ex(func):
@@ -95,56 +163,6 @@ def try_ex(func):
     except KeyError:
         return None
 
-
-def generate_car_price(location, days, age, car_type):
-    """
-    Generates a number within a reasonable range that might be expected for a flight.
-    The price is fixed for a given pair of locations.
-    """
-
-    car_types = ['economy', 'standard', 'midsize', 'full size', 'minivan', 'luxury']
-    base_location_cost = 0
-    for i in range(len(location)):
-        base_location_cost += ord(location.lower()[i]) - 97
-
-    age_multiplier = 1.10 if age < 25 else 1
-    # Select economy is car_type is not found
-    if car_type not in car_types:
-        car_type = car_types[0]
-
-    return days * ((100 + base_location_cost) + ((car_types.index(car_type.lower()) * 50) * age_multiplier))
-
-
-def generate_hotel_price(location, nights, room_type):
-    """
-    Generates a number within a reasonable range that might be expected for a hotel.
-    The price is fixed for a pair of location and roomType.
-    """
-
-    room_types = ['queen', 'king', 'deluxe']
-    cost_of_living = 0
-    for i in range(len(location)):
-        cost_of_living += ord(location.lower()[i]) - 97
-
-    return nights * (100 + cost_of_living + (100 + room_types.index(room_type.lower())))
-
-
-def isvalid_car_type(car_type):
-    car_types = ['economy', 'standard', 'midsize', 'full size', 'minivan', 'luxury']
-    return car_type.lower() in car_types
-
-
-def isvalid_city(city):
-    valid_cities = ['new york', 'los angeles', 'chicago', 'houston', 'philadelphia', 'phoenix', 'san antonio',
-                    'san diego', 'dallas', 'san jose', 'austin', 'jacksonville', 'san francisco', 'indianapolis',
-                    'columbus', 'fort worth', 'charlotte', 'detroit', 'el paso', 'seattle', 'denver', 'washington dc',
-                    'memphis', 'boston', 'nashville', 'baltimore', 'portland']
-    return city.lower() in valid_cities
-
-
-def isvalid_room_type(room_type):
-    room_types = ['queen', 'king', 'deluxe']
-    return room_type.lower() in room_types
 
 
 def isvalid_date(date):
@@ -175,314 +193,698 @@ def build_validation_result(isvalid, violated_slot, message_content):
     }
 
 
-def validate_book_car(slots):
-    pickup_city = try_ex(lambda: slots['PickUpCity'])
-    pickup_date = try_ex(lambda: slots['PickUpDate'])
-    return_date = try_ex(lambda: slots['ReturnDate'])
-    driver_age = safe_int(try_ex(lambda: slots['DriverAge']))
-    car_type = try_ex(lambda: slots['CarType'])
+def validate_wellsiteid(wellsiteId):
 
-    if pickup_city and not isvalid_city(pickup_city):
+    if not wellsiteId:
+        logger.debug("error. wellsite id is not specified")
         return build_validation_result(
             False,
-            'PickUpCity',
-            'We currently do not support {} as a valid destination.  Can you try a different city?'.format(pickup_city)
+            'wellsiteId',
+            'You need to specify a wellsite id of the format 1 dash 1 dash 1 dash 1 dash w5'
         )
-
-    if pickup_date:
-        if not isvalid_date(pickup_date):
-            return build_validation_result(False, 'PickUpDate', 'I did not understand your departure date.  When would you like to pick up your car rental?')
-        if datetime.datetime.strptime(pickup_date, '%Y-%m-%d').date() <= datetime.date.today():
-            return build_validation_result(False, 'PickUpDate', 'Reservations must be scheduled at least one day in advance.  Can you try a different date?')
-
-    if return_date:
-        if not isvalid_date(return_date):
-            return build_validation_result(False, 'ReturnDate', 'I did not understand your return date.  When would you like to return your car rental?')
-
-    if pickup_date and return_date:
-        if dateutil.parser.parse(pickup_date) >= dateutil.parser.parse(return_date):
-            return build_validation_result(False, 'ReturnDate', 'Your return date must be after your pick up date.  Can you try a different return date?')
-
-        if get_day_difference(pickup_date, return_date) > 30:
-            return build_validation_result(False, 'ReturnDate', 'You can reserve a car for up to thirty days.  Can you try a different return date?')
-
-    if driver_age is not None and driver_age < 18:
+    
+    pattern = re.compile("^(\d{2}-\d{2}-\d{3}-\d{2}[a-zA-Z][0-9])")
+    match = pattern.match(wellsiteId)
+    
+    if not match:
+        logger.debug("error. wellsite id={} does not match expected format".format(wellsiteId))
         return build_validation_result(
             False,
-            'DriverAge',
-            'Your driver must be at least eighteen to rent a car.  Can you provide the age of a different driver?'
+            'wellsiteId',
+            'You need to specify a wellsite id of the format 1 dash 1 dash 1 dash 1 dash w5'
         )
-
-    if car_type and not isvalid_car_type(car_type):
-        return build_validation_result(
-            False,
-            'CarType',
-            'I did not recognize that model.  What type of car would you like to rent?  '
-            'Popular cars are economy, midsize, or luxury')
 
     return {'isValid': True}
 
 
-def validate_hotel(slots):
-    location = try_ex(lambda: slots['Location'])
-    checkin_date = try_ex(lambda: slots['CheckInDate'])
-    nights = safe_int(try_ex(lambda: slots['Nights']))
-    room_type = try_ex(lambda: slots['RoomType'])
-
-    if location and not isvalid_city(location):
-        return build_validation_result(
-            False,
-            'Location',
-            'We currently do not support {} as a valid destination.  Can you try a different city?'.format(location)
-        )
-
-    if checkin_date:
-        if not isvalid_date(checkin_date):
-            return build_validation_result(False, 'CheckInDate', 'I did not understand your check in date.  When would you like to check in?')
-        if datetime.datetime.strptime(checkin_date, '%Y-%m-%d').date() <= datetime.date.today():
-            return build_validation_result(False, 'CheckInDate', 'Reservations must be scheduled at least one day in advance.  Can you try a different date?')
-
-    if nights is not None and (nights < 1 or nights > 30):
-        return build_validation_result(
-            False,
-            'Nights',
-            'You can make a reservations for from one to thirty nights.  How many nights would you like to stay for?'
-        )
-
-    if room_type and not isvalid_room_type(room_type):
-        return build_validation_result(False, 'RoomType', 'I did not recognize that room type.  Would you like to stay in a queen, king, or deluxe room?')
-
-    return {'isValid': True}
 
 
-""" --- Functions that control the bot's behavior --- """
-
-
-def book_hotel(intent_request):
+def production_stats(intent_request):
     """
-    Performs dialog management and fulfillment for booking a hotel.
+    Performs dialog management for retrieving wellsite production stats.
 
-    Beyond fulfillment, the implementation for this intent demonstrates the following:
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
     1) Use of elicitSlot in slot validation and re-prompting
     2) Use of sessionAttributes to pass information that can be used to guide conversation
     """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
 
-    location = try_ex(lambda: intent_request['currentIntent']['slots']['Location'])
-    checkin_date = try_ex(lambda: intent_request['currentIntent']['slots']['CheckInDate'])
-    nights = safe_int(try_ex(lambda: intent_request['currentIntent']['slots']['Nights']))
-
-    room_type = try_ex(lambda: intent_request['currentIntent']['slots']['RoomType'])
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
 
-    # Load confirmation history and track the current reservation.
-    reservation = json.dumps({
-        'ReservationType': 'Hotel',
-        'Location': location,
-        'RoomType': room_type,
-        'CheckInDate': checkin_date,
-        'Nights': nights
-    })
 
-    session_attributes['currentReservation'] = reservation
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
 
-    if intent_request['invocationSource'] == 'DialogCodeHook':
-        # Validate any slots which have been specified.  If any are invalid, re-elicit for their value
-        validation_result = validate_hotel(intent_request['currentIntent']['slots'])
-        if not validation_result['isValid']:
-            slots = intent_request['currentIntent']['slots']
-            slots[validation_result['violatedSlot']] = None
 
+    # load the wellsite visit record
+    wellsite_location_record = retrieve_from_session(session_attributes, 'wellsiteLocationRecord')
+    
+    if not wellsite_location_record or not wellsite_location_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite record in session or mismatch on wellsite id')
+        wellsite_location_record = retrieve_wellsite_location_record(wellsite_id)
+
+    
+        if wellsite_location_record is None:
             return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
                 slots,
-                validation_result['violatedSlot'],
-                validation_result['message']
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve details of wellsite {}.  Please try again.'.format(wellsite_id)}
             )
+        session_attributes['wellsiteLocationRecord'] = json.dumps(wellsite_location_record)
 
-        # Otherwise, let native DM rules determine how to elicit for slots and prompt for confirmation.  Pass price
-        # back in sessionAttributes once it can be calculated; otherwise clear any setting from sessionAttributes.
-        if location and checkin_date and nights and room_type:
-            # The price of the hotel has yet to be confirmed.
-            price = generate_hotel_price(location, nights, room_type)
-            session_attributes['currentReservationPrice'] = price
-        else:
-            try_ex(lambda: session_attributes.pop('currentReservationPrice'))
+    # in a real situation, we would query the production records
+    # instead, we will randomly assign a value
+    baseOilProduction = safe_int(wellsite_location_record['oilProductionRate'])
+    baseWaterProduction = safe_int(wellsite_location_record['waterProductionRate'])
 
-        session_attributes['currentReservation'] = reservation
-        return delegate(session_attributes, intent_request['currentIntent']['slots'])
+    multiplier = 100 + random.randint(0,25)
+    actualOilProduction = baseOilProduction * multiplier / 100
 
-    # Booking the hotel.  In a real application, this would likely involve a call to a backend service.
-    logger.debug('bookHotel under={}'.format(reservation))
+    #multiplier = 100 + random.randint(0,25)
+    actualWaterProduction = baseWaterProduction * multiplier / 100
 
-    try_ex(lambda: session_attributes.pop('currentReservationPrice'))
-    try_ex(lambda: session_attributes.pop('currentReservation'))
-    session_attributes['lastConfirmedReservation'] = reservation
-
+    # create the response message
+    msg = 'Current production is {} barrels of oil and {} barrels of water.  That is {}% above expectation'.format(actualOilProduction, actualWaterProduction, multiplier-100)
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
     return close(
         session_attributes,
         'Fulfilled',
         {
             'contentType': 'PlainText',
-            'content': 'Thanks, I have placed your reservation.   Please let me know if you would like to book a car '
-                       'rental, or another hotel.'
+            'content': msg
         }
     )
 
 
-def book_car(intent_request):
+def session_details(intent_request):
     """
-    Performs dialog management and fulfillment for booking a car.
+    Performs dialog management for retrieving information stored in session.
 
-    Beyond fulfillment, the implementation for this intent demonstrates the following:
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
     1) Use of elicitSlot in slot validation and re-prompting
     2) Use of sessionAttributes to pass information that can be used to guide conversation
     """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('session={}'.format(intent_request['sessionAttributes']))
     slots = intent_request['currentIntent']['slots']
-    pickup_city = slots['PickUpCity']
-    pickup_date = slots['PickUpDate']
-    return_date = slots['ReturnDate']
-    driver_age = slots['DriverAge']
-    car_type = slots['CarType']
-    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    last_confirmed_reservation = try_ex(lambda: session_attributes['lastConfirmedReservation'])
-    if last_confirmed_reservation:
-        last_confirmed_reservation = json.loads(last_confirmed_reservation)
-    confirmation_context = try_ex(lambda: session_attributes['confirmationContext'])
 
-    # Load confirmation history and track the current reservation.
-    reservation = json.dumps({
-        'ReservationType': 'Car',
-        'PickUpCity': pickup_city,
-        'PickUpDate': pickup_date,
-        'ReturnDate': return_date,
-        'CarType': car_type
-    })
-    session_attributes['currentReservation'] = reservation
+    msg = 'Session is empty'
+    if ( len(session_attributes.keys() )):
+        msg = 'Session contains '
+        for key in session_attributes:
+            msg += key + ','
 
-    if pickup_city and pickup_date and return_date and driver_age and car_type:
-        # Generate the price of the car in case it is necessary for future steps.
-        price = generate_car_price(pickup_city, get_day_difference(pickup_date, return_date), driver_age, car_type)
-        session_attributes['currentReservationPrice'] = price
 
-    if intent_request['invocationSource'] == 'DialogCodeHook':
-        # Validate any slots which have been specified.  If any are invalid, re-elicit for their value
-        validation_result = validate_book_car(intent_request['currentIntent']['slots'])
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
+
+    # create the response message
+    logger.debug('session_details msg={}'.format(msg))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+def fluid_level(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+    # extract wellsite slot value
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
+
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+
+    # load the wellsite visit record
+    wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+        
+    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+        
+        if wellsite_visit_record is None:
             return elicit_slot(
                 session_attributes,
                 intent_request['currentIntent']['name'],
                 slots,
-                validation_result['violatedSlot'],
-                validation_result['message']
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(wellsite_id)}
             )
+        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
 
-        # Determine if the intent (and current slot settings) has been denied.  The messaging will be different
-        # if the user is denying a reservation he initiated or an auto-populated suggestion.
+
+
+    # create the response message
+    msg = '{} reported a fluid level of {} on {}'.format(wellsite_visit_record['fluidLevelCheckedBy'], wellsite_visit_record['fluidLevel'], wellsite_visit_record['fluidLevelCheckedDate'])
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+def rod_replacement(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+    # extract wellsite slot value
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
+
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+
+    # load the wellsite visit record
+    wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+        
+    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+        
+        if wellsite_visit_record is None:
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(wellsite_id)}
+            )
+        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
+
+    # create the response message
+    msg = ''
+    if wellsite_visit_record['rodReplacedBy'] == ' ':
+        msg = 'rod was not replaced on last visit'
+    else:
+        msg = '{} replaced the rod on {}'.format(wellsite_visit_record['rodReplacedBy'], wellsite_visit_record['rodReplacementDate'], wellsite_visit_record['fluidLevelCheckedDate'])
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+
+def comments(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+    # extract wellsite slot value
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
+
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+
+    # load the wellsite visit record
+    wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+        
+    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+        
+        if wellsite_visit_record is None:
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(wellsite_id)}
+            )
+        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
+
+    # create the response message
+    msg = 'the well was visited on {} and operator commented {}'.format(wellsite_visit_record['dateOfLastVisit'], wellsite_visit_record['comments'] )
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+
+def add_comments(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+    # extract wellsite slot value
+    wellsite_id = ''
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
+
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
+
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+
+    # load the wellsite visit record
+    wellsite_visit_record = retrieve_from_session(session_attributes, 'wellsiteVisitRecord')
+        
+    if not wellsite_visit_record or not wellsite_visit_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite visit in session or mismatch on wellsite id.  looking in dynamo')
+        wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
+
+        
+        if wellsite_visit_record is None:
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve last visit details for wellsite {}.  Please try again.'.format(wellsite_id)}
+            )
+        session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
+
+    # we have the last visit record.  now update the comments field
+    input_transcript = intent_request['inputTranscript']
+    logger.debug('input_transcript={}'.format(input_transcript))
+    comment = slots['comments']
+    wellsite_visit_record['comments'] = comment
+    addWellsiteVisitRecordToDynamo(wellsite_visit_record)
+    session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+
+    # create the response message
+    msg = 'your comments have been added for well {}'.format(wellsite_id)
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
+    return close(
+        session_attributes,
+        'Fulfilled',
+        {
+            'contentType': 'PlainText',
+            'content': msg
+        }
+    )
+
+
+def new_wellsite_visit_record(wellsiteId):
+    wellsite_visit_record = {
+        'wellSiteId': wellsiteId,
+        'rodCondition': ' ',
+        'rodReplacementDate': ' ',
+        'rodReplacedBy': ' ',
+        'fluidLevel': ' ',
+        'fluidLevelCheckedDate': ' ',
+        'fluidLevelCheckedBy': ' ',
+        'dateOfLastVisit': ' ',
+        'durationOfLastVisit': ' ',
+        'operatorOfLastVisit' : ' ',
+        'comments': ' '
+    }
+    return wellsite_visit_record
+    
+
+
+def wellsite_visit(intent_request):
+    """
+    Performs dialog management for retrieving wellsite production stats.
+
+    Beyond data retrieval, the implementation for this intent demonstrates the following:
+    1) Use of elicitSlot in slot validation and re-prompting
+    2) Use of sessionAttributes to pass information that can be used to guide conversation
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    invocation_source = intent_request['invocationSource']
+
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+
+    # extract slot values -> will be used for validation and eventually storage
+    # TODO: do we need to confirm that slots exist?
+    wellsite_id = slots['wellsiteId']
+    operator_name = slots['operatorName']
+    time_on_site = slots['timeOnSite']
+    rod_condition = slots['rodCondition']
+    fluid_level = slots['fluidLevel']
+    rod_replaced = False
+    curTimestamp = '2019-02-02 2:02:02'
+
+
+    if invocation_source == 'DialogCodeHook':
+        logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
         if confirmation_status == 'Denied':
-            # Clear out auto-population flag for subsequent turns.
-            try_ex(lambda: session_attributes.pop('confirmationContext'))
-            try_ex(lambda: session_attributes.pop('currentReservation'))
-            if confirmation_context == 'AutoPopulate':
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    {
-                        'PickUpCity': None,
-                        'PickUpDate': None,
-                        'ReturnDate': None,
-                        'DriverAge': None,
-                        'CarType': None
-                    },
-                    'PickUpCity',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'Where would you like to make your car reservation?'
-                    }
-                )
-
+            # update rod status as not replaced
+            # mark everything as good -> we can then move on to processing the utterance
+            rod_replaced = False
+            session_attributes['rod_replaced'] = rod_replaced
             return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
-        if confirmation_status == 'None':
-            # If we are currently auto-populating but have not gotten confirmation, keep requesting for confirmation.
-            if (not pickup_city and not pickup_date and not return_date and not driver_age and not car_type)\
-                    or confirmation_context == 'AutoPopulate':
-                if last_confirmed_reservation and try_ex(lambda: last_confirmed_reservation['ReservationType']) == 'Hotel':
-                    # If the user's previous reservation was a hotel - prompt for a rental with
-                    # auto-populated values to match this reservation.
-                    session_attributes['confirmationContext'] = 'AutoPopulate'
-                    return confirm_intent(
+        elif confirmation_status == 'Confirmed':
+            # update rod status as replaced
+            rod_replaced = True
+            session_attributes['rod_replaced'] = rod_replaced
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'None':
+            if wellsite_id and operator_name and time_on_site and rod_condition and fluid_level:
+                # we have all the values.  now send confirmation to ask if rod was replaced
+                return confirm_intent(
                         session_attributes,
                         intent_request['currentIntent']['name'],
                         {
-                            'PickUpCity': last_confirmed_reservation['Location'],
-                            'PickUpDate': last_confirmed_reservation['CheckInDate'],
-                            'ReturnDate': add_days(
-                                last_confirmed_reservation['CheckInDate'], last_confirmed_reservation['Nights']
-                            ),
-                            'CarType': None,
-                            'DriverAge': None
+                            'wellsiteId': wellsite_id,
+                            'operatorName': operator_name,
+                            'timeOnSite': time_on_site,
+                            'rodCondition': rod_condition,
+                            'fluidLevel': fluid_level
                         },
                         {
                             'contentType': 'PlainText',
-                            'content': 'Is this car rental for your {} night stay in {} on {}?'.format(
-                                last_confirmed_reservation['Nights'],
-                                last_confirmed_reservation['Location'],
-                                last_confirmed_reservation['CheckInDate']
-                            )
+                            'content': 'Did you replace the rod?'
                         }
                     )
-
-            # Otherwise, let native DM rules determine how to elicit for slots and/or drive confirmation.
+            # let normal processing handle whether the slots are specified
             return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
-        # If confirmation has occurred, continue filling any unfilled slot values or pass to fulfillment.
-        if confirmation_status == 'Confirmed':
-            # Remove confirmationContext from sessionAttributes so it does not confuse future requests
-            try_ex(lambda: session_attributes.pop('confirmationContext'))
-            if confirmation_context == 'AutoPopulate':
-                if not driver_age:
-                    return elicit_slot(
-                        session_attributes,
-                        intent_request['currentIntent']['name'],
-                        intent_request['currentIntent']['slots'],
-                        'DriverAge',
-                        {
-                            'contentType': 'PlainText',
-                            'content': 'How old is the driver of this car rental?'
-                        }
-                    )
-                elif not car_type:
-                    return elicit_slot(
-                        session_attributes,
-                        intent_request['currentIntent']['name'],
-                        intent_request['currentIntent']['slots'],
-                        'CarType',
-                        {
-                            'contentType': 'PlainText',
-                            'content': 'What type of car would you like? Popular models are '
-                                       'economy, midsize, and luxury.'
-                        }
-                    )
+            
+    # we should have rod replacement stored in session
+    if 'rod_replaced' in session_attributes:
+        rod_replaced = session_attributes['rod_replaced']
+    
+    if 'wellsiteId' in slots:
+        wellsite_id = slots['wellsiteId']
 
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+    if not wellsite_id:
+        logger.debug('wellsiteid is not specified.  retrieving from session')
+        if 'wellsiteId' in session_attributes:
+            wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
 
-    # Booking the car.  In a real application, this would likely involve a call to a backend service.
-    logger.debug('bookCar at={}'.format(reservation))
-    del session_attributes['currentReservationPrice']
-    del session_attributes['currentReservation']
-    session_attributes['lastConfirmedReservation'] = reservation
+
+    # Validate our slot values.  If any are invalid, re-elicit for their value
+    validation_result = validate_wellsiteid(wellsite_id)
+    if validation_result['isValid']:
+        session_attributes['wellsiteId'] = wellsite_id
+    else:
+        slots[validation_result['violatedSlot']] = None
+        return elicit_slot(
+            session_attributes,
+            intent_request['currentIntent']['name'],
+            slots,
+            validation_result['violatedSlot'],
+            validation_result['message']
+        )
+
+    # confirm this is a valid well by retrieving record from the DB
+    wellsite_location_record = retrieve_from_session(session_attributes, 'wellsiteLocationRecord')
+    
+    if not wellsite_location_record or not wellsite_location_record['wellSiteId'] == wellsite_id:
+        logger.debug('could not find wellsite record in session or mismatch on wellsite id')
+        wellsite_location_record = retrieve_wellsite_location_record(wellsite_id)
+    
+        if wellsite_location_record is None:
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {'contentType': 'PlainText', 'content': 'Could not retrieve details of wellsite {}.  Please try again.'.format(wellsite_id)}
+            )
+        session_attributes['wellsiteLocationRecord'] = json.dumps(wellsite_location_record)
+
+
+
+    # create a new wellsite visit record
+    wellsite_visit_record = new_wellsite_visit_record(wellsite_id)
+    wellsite_visit_record['rodCondition'] = rod_condition
+    if rod_replaced is True:
+        wellsite_visit_record['rodReplacementDate'] = curTimestamp
+        wellsite_visit_record['rodReplacedBy'] = operator_name
+    else:
+        wellsite_visit_record['rodReplacementDate'] = ' '
+        wellsite_visit_record['rodReplacedBy'] = ' '
+
+    wellsite_visit_record['fluidLevel'] = fluid_level
+    wellsite_visit_record['fluidLevelCheckedDate'] = curTimestamp
+    wellsite_visit_record['fluidLevelCheckedBy'] = operator_name
+    wellsite_visit_record['dateOfLastVisit'] = curTimestamp
+    wellsite_visit_record['durationOfLastVisit'] = time_on_site
+    wellsite_visit_record['operatorOfLastVisit'] = operator_name
+    wellsite_visit_record['comments'] = ' '
+    addWellsiteVisitRecordToDynamo(wellsite_visit_record)
+    session_attributes['wellsiteVisitRecord'] = json.dumps(wellsite_visit_record)
+    
+
+    # create the response message
+    msg = 'thank-you {} the information has been saved.  Please remember to add further comments.'.format(operator_name)
+    logger.debug('production_stats msg={}'.format(msg))
+    logger.debug('session={}'.format(session_attributes))
+    
     return close(
         session_attributes,
         'Fulfilled',
         {
             'contentType': 'PlainText',
-            'content': 'Thanks, I have placed your reservation.'
+            'content': msg
         }
     )
+# --- Validation Funmctions ---
+def validate_wellsiteid_from_lex(intent_request):
+    """
+    validates the wellsite id slot
+    """
+    logger.debug('intent={}'.format(intent_request['currentIntent']))
+    logger.debug('start session={}'.format(intent_request['sessionAttributes']))
+    slots = intent_request['currentIntent']['slots']
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    invocation_source = intent_request['invocationSource']
 
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+
+
+    # extract slot values -> will be used for validation and eventually storage
+    wellsite_id = slots['wellsiteId']
+
+
+    if invocation_source == 'DialogCodeHook':
+        logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
+        if confirmation_status == 'Denied':
+            # update rod status as not replaced
+            # mark everything as good -> we can then move on to processing the utterance
+            rod_replaced = False
+            session_attributes['wellsite_confirmed'] = rod_replaced
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                'wellsiteId',
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Please specify the wellsite id'
+                }
+            )
+            #return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'Confirmed':
+            # update rod status as replaced
+            rod_replaced = True
+            session_attributes['wellsite_confirmed'] = rod_replaced
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+        elif confirmation_status == 'None':
+            if wellsite_id :
+                nltk_tokens = wellsite_id.split()
+                wellsite_tokens = []
+                for token in nltk_tokens:
+                    if token.isdigit() : #or token[0] == 'w' or token[0] == 'W'
+                        logger.debug('found token'.format(token))
+                        wellsite_tokens.append(int(token))
+                wellsite_id = ''
+                if len(wellsite_tokens) >= 4:
+                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}W5'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3])
+                else
+                    return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+                logger.debug('created wellsiteid {}'.format(wellsite_id))
+                
+                # we have all the values.  now send confirmation to ask if rod was replaced
+                return confirm_intent(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        {
+                            'wellsiteId': wellsite_id
+                        },
+                        {
+                            'contentType': 'PlainText',
+                            'content': 'Is this the correct wellsite id? {} dash {} dash {} dash {} dash {}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3], 'w5')
+                        }
+                    )
+            # let normal processing handle whether the slots are specified
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+    return delegate(session_attributes, intent_request['currentIntent']['slots'])
+
+    
 
 # --- Intents ---
 
@@ -495,12 +897,35 @@ def dispatch(intent_request):
     logger.debug('dispatch userId={}, intentName={}'.format(intent_request['userId'], intent_request['currentIntent']['name']))
 
     intent_name = intent_request['currentIntent']['name']
+    invocation_source = intent_request['invocationSource']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'BookHotel':
-        return book_hotel(intent_request)
-    elif intent_name == 'BookCar':
-        return book_car(intent_request)
+    if intent_name == 'GetProductionStats':
+        if invocation_source == 'DialogCodeHook':
+            return validate_wellsiteid_from_lex(intent_request)
+        else:
+            return production_stats(intent_request)
+    elif intent_name == 'GetSessionDetails':
+        return session_details(intent_request)
+    elif intent_name == 'GetFluidLevel':
+        if invocation_source == 'DialogCodeHook':
+            return validate_wellsiteid_from_lex(intent_request)
+        else:
+            return fluid_level(intent_request)
+    elif intent_name == 'GetRodReplacement':
+        if invocation_source == 'DialogCodeHook':
+            return validate_wellsiteid_from_lex(intent_request)
+        else:
+            return rod_replacement(intent_request)
+    elif intent_name == 'GetComments':
+        if invocation_source == 'DialogCodeHook':
+            return validate_wellsiteid_from_lex(intent_request)
+        else:
+            return comments(intent_request)
+    elif intent_name == 'WellsiteVisit':
+        return wellsite_visit(intent_request)
+    elif intent_name == 'AddComments':
+        return add_comments(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
