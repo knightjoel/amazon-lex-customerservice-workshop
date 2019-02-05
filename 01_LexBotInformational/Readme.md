@@ -140,7 +140,7 @@ slot type.
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. In the **Slots** section of the `GetFluidLevel` intent, fill in `wellSiteId` for the slot **Name**
+1. In the **Slots** section of the `GetFluidLevel` intent, fill in `wellsiteId` for the slot **Name**
 
 1. Select `WellSiteIdType` for **Slot type**
 
@@ -161,10 +161,12 @@ By providing sample utterances for a given intent, you can teach Amazon Lex diff
 Add the following sample utterances to the intent:
 
 * `fluid level`
-* `fluid level at {wellSiteId}`
-* `What is the change in fluid level at {wellSiteId}`
-* `When was the fluid level ast checked at {wellSiteId}`
+* `fluid level at {wellsiteId}`
+* `What is the change in fluid level at {wellsiteId}`
+* `When was the fluid level ast checked at {wellsiteId}`
 
+> The {wellsiteId} should be highlighted in Blue and highlights it matches with the defined slots
+>
 > Note that you don't need to list exhaustively every possible way of saying the same intent, just a few examples so the Amazon Lex deep learning algorithms can "learn".
 >
 > However, if during testing you identified some additional ways to express the intent and Lex doesn't understand it, you can add that as a sample utterance to improve the Lex bot.
