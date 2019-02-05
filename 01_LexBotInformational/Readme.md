@@ -161,9 +161,9 @@ By providing sample utterances for a given intent, you can teach Amazon Lex diff
 Add the following sample utterances to the intent:
 
 * `fluid level`
-* `fluid level at {wellsiteId}`
-* `What is the change in fluid level at {wellsiteId}`
-* `When was the fluid level ast checked at {wellsiteId}`
+* `fluid level at {wellSiteId}`
+* `What is the change in fluid level at {wellSiteId}`
+* `When was the fluid level ast checked at {wellSiteId}`
 
 > Note that you don't need to list exhaustively every possible way of saying the same intent, just a few examples so the Amazon Lex deep learning algorithms can "learn".
 >
