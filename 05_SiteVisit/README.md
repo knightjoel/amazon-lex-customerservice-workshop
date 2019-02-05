@@ -2,7 +2,7 @@
 
 In this module you will add a new intent to your `WellsiteBot` bot that allows a site operator to retrieve and update information about a well during a site visit.
 
-At completion of this module you will be able to test out your chatbot by making a statement like "*I am doing an inspection at 01-01-001-01W5*"
+At completion of this module you will be able to test out your chatbot by making a statement like "*I am doing an inspection at 01-01-001-01-W5*"
 
 ## Implementation Instructions
 
@@ -175,7 +175,7 @@ Save the intent, build and test the bot in the Lex Console.
 
 1. Click **Build** at the top right of the page to build the bot
 
-1. Once the build completes, use the **Test Bot** window to test the site visit intent by typing "**I am doing an inspection at 01-01-001-01W5**". Verify that the bot is able to detect the intent.
+1. Once the build completes, use the **Test Bot** window to test the site visit intent by typing "**I am doing an inspection at 1 dash 1 dash 1 dash 1 dash w5**". Verify that the bot is able to detect the intent.  The unusual format for the wellsite id is because we need to simulate the voice interface from Connect.
 
 	<img src="images/test-utterance-including-slot.png" alt="" width="50%">
 </details>
@@ -189,7 +189,7 @@ Now test the bot via Amazon Connect by phoning into the bot.
 
 1. Dial the phone number that is assigned to your bot
 
-1. Issue the command `I am starting an inspection at site 01-01-001-01W5`
+1. Issue the command `I am starting an inspection at site 1 dash 1 dash 1 dash 1 dash w5`
 
 1. Answer each question the bot prompts you with:
 
@@ -211,7 +211,7 @@ Now check the fluid level to confirm the bot recorded your visit in the database
 
 1. Dial the phone number that is assigned to your bot
 
-1. Issue the utterance `fluid level at 01-01-001-01W5`
+1. Issue the utterance `fluid level at 1 dash 1 dash 1 dash 1 dash w5`
 
 1. The bot should respond with the fluid level you just gave it along with your name and the date.
 </details>
