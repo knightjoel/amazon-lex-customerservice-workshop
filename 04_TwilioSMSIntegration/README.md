@@ -9,7 +9,7 @@ Each of the following sections provide an implementation overview and detailed, 
 ### Signup for a new Twilio trial account
 If you don't already have an account, sign up [here](https://www.twilio.com/try-twilio).
 
-Next, set up a Twilio SMS-enabled phone number where users can send SMS messages to interact with your bot. If you don’t already have a Twilio account, you can sign-up for a trial account, which includes a free phone number. Make sure that your Twilio number has SMS capability turned on, and that you verify your own phone number with Twilio for testing. Remember, Twilio trial account has some limitations for example for the phone number you choose you will be able to interact with verified phone numbers only. Which means in order to test your bot with Twilio integration you have to verify your phone number by adding to Verified Caller ID's in the Twilio console.
+Next, set up a Twilio SMS-enabled phone number where users can send SMS messages to interact with your bot. If you don’t already have a Twilio account, you can sign-up for a trial account, which includes a free phone number. Make sure that your Twilio number has SMS capability turned on, and that you verify your own phone number with Twilio for testing. Remember, Twilio trial account has some limitations for example for the phone number you choose you will be able to interact with verified phone numbers only. Which means in order to test your bot with Twilio integration you have to verify your phone number by adding to Verified Caller IDs in the Twilio console.
 
 On the Twilio Console, note your Twilio Account SID and your Auth Token (Live credentials, not Test).
 
@@ -30,7 +30,7 @@ To associate the Amazon Lex bot with your Twilio programmable SMS endpoint, crea
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. Open the [Amazon Lex console](https://console.aws.amazon.com/lex/home?region=us-east-1) and choose the `InternationalPlan` bot
+1. Open the [Amazon Lex console](https://console.aws.amazon.com/lex/home?region=us-west-2) and choose the `WellsiteBot` bot
 
 1. Choose the **Channels** tab; then **Twilio SMS**
 

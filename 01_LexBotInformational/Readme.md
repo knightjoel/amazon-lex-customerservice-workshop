@@ -81,7 +81,7 @@ Use the Lex Console to create a bot named `WellsiteBot`.
 
 	For **Bot name**, use `WellsiteBot`
 
-	For **Output voice**, pick `Joanna`
+	For **Output voice**, pick `Mathew`
 
 	For **Session timeout**, use 10 minutes
 
@@ -144,7 +144,9 @@ slot type.
 
 1. Select `WellSiteIdType` for **Slot type**
 
-1. For **Prompt**, put in `What is the wellsite Id?`
+1. For **Prompt**, put in `What is the wellsite ID?`
+
+1. Check the box to indicate the slot is **required**
 
 1. Click the (+) sign to add the slot
 
