@@ -2,20 +2,20 @@
 
 In this module you will build a chatbot in Lex and enable it to answer operators' questions about a well site.
 
-At completion of this module you will be able to test out your chatbot in the Lex console by asking questions such as "*What is the fliud level at 01-01-001-01W5?*
+At completion of this module you will be able to test out your chatbot in the Lex console by asking questions such as "*What is the fliud level at 01-01-001-01-W5?*
 
 ##  Informational queries and chatbots
 The first intent you will configure your bot to understand and fulfill will allow your operators to query information about a well site as they prepare to do maintenance. This serves an example for a common use case for chatbots: asking information.
 
 There are two ways you can implement an informational intent: you can make it general or personalize it based on the user. The latter one requires your bot to be able to identity the user the bot is interacting with.
 
-For example, if you build a chatbot that can handle checking the fluid level, the general implementation can handle questions like "*what's the fliud level at 01-01-001-01W5?*"; whereas if you can identify the user asking the question, the bot can give answers to questions such as "*when was the last time ***I*** checked the fluid level at 01-01-001-01W5?*"
+For example, if you build a chatbot that can handle checking the fluid level, the general implementation can handle questions like "*what's the fliud level at 01-01-001-01-W5?*"; whereas if you can identify the user asking the question, the bot can give answers to questions such as "*when was the last time ***I*** checked the fluid level at 01-01-001-01-W5?*"
 
 In later modules, you will try out ways for identifying the user in a Lex bot conversation. For this module, we will stick with these general information queries:
 
 - What is the fluid level?
 - What is the current production?
-- When was the last time the rod failed?
+- When was the last time the rod was replaced?
 
 The bot will give the same answer for anybody that asks the same question.
 
@@ -127,10 +127,10 @@ to `Slot types` in the left-hand menu.
 
 1. Slot Resolution: **Expand Values**
 
-1. Value: Enter the value **01-01-001-01W5** and hit the **+** button.
+1. Value: Enter the value **01-01-001-01-W5** and hit the **+** button.
 
-1. Repeat the above step for these two wells: **01-01-001-01W5** and
-**01-01-001-01W5**
+1. Repeat the above step for these two wells: **02-02-002-02-W5** and
+**03-03-003-03-W5**
 
 1. Click **Save slot type**
 
@@ -200,7 +200,7 @@ Now we have defined the conversational interface, we need to configure the backe
 The Lambda function that can respond to the operator's request is already deployed by CloudFormation in the setup step. (It does so by querying a DynamoDB table pre-populated with fake data, also launched as part of the preparation CloudFormation)
 
 <details>
-<summary><strong>Expand here for instructions to check the DynamoDB table content on international plan catalogue</strong></summary><p>
+<summary><strong>Expand here for instructions to check the DynamoDB table content on wellsite data</strong></summary><p>
 
 1. Go to the [DynamoDB console](https://console.aws.amazon.com/dynamodb/home)
 
@@ -218,6 +218,12 @@ Now we are ready to configure Lex to send the detected intent and slot values fr
 
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
+
+1. In the **Lambda Initialization and validation** section of the intent, choose **AWS Lambda function** and use the selector to pick the `chatbot-workshop-LexBotHandler` function
+
+	<img src="images/pick-lambda.png" alt="" width="90%">
+
+	> There are a handful of other Lambda functions the CloudFormation template created and that they all begin with `chatbot-workshop`, so be sure to select the right one.
 
 1. In the **Fulfillment** section of the intent, choose **AWS Lambda function** and use the selector to pick the `chatbot-workshop-LexBotHandler` function
 
