@@ -23,7 +23,9 @@ import random
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-
+contentWellsiteIdFormat = 'Please specify wellsite id in the format 1 dash 1 dash 1 dash 1 dash W5'
+regexFullWellsiteId = "^(\d{1,2}-\d{1,2}-\d{1,3}-\d{1,2}[wW][0-9])"
+regexShortW = "^[wW][0-9]"
 # --- Helpers that build all of the responses ---
 
 
@@ -203,10 +205,10 @@ def validate_wellsiteid(wellsiteId):
         return build_validation_result(
             False,
             'wellsiteId',
-            'You need to specify a wellsite id of the format 1 dash 1 dash 1 dash 1 dash w5'
+            contentWellsiteIdFormat
         )
     
-    pattern = re.compile("^(\d{2}-\d{2}-\d{3}-\d{2}[a-zA-Z][0-9])")
+    pattern = re.compile(regexFullWellsiteId)
     match = pattern.match(wellsiteId)
     
     if not match:
@@ -214,7 +216,7 @@ def validate_wellsiteid(wellsiteId):
         return build_validation_result(
             False,
             'wellsiteId',
-            'You need to specify a wellsite id of the format 1 dash 1 dash 1 dash 1 dash w5'
+            contentWellsiteIdFormat
         )
 
     return {'isValid': True}
@@ -437,26 +439,44 @@ def add_comments(intent_request):
             wellsite_id = try_ex(lambda: session_attributes['wellsiteId'])
 
 
-    # Validate our slot values.  If any are invalid, re-elicit for their value
     nltk_tokens = wellsite_id.split()
     wellsite_tokens = []
     for token in nltk_tokens:
-        if token.isdigit() : #or token[0] == 'w' or token[0] == 'W'
-            logger.debug('found token'.format(token))
+        logger.debug('token={}'.format(token))
+        if token.isdigit(): 
+            logger.debug('found number token: {}'.format(token))
             wellsite_tokens.append(int(token))
+        else:
+            pattern = re.compile(regexShortW)
+            match = pattern.match(token)
+            if match:
+                logger.debug('found W# token {}'.format(token))
+                wellsite_tokens.append(token)
+                # subTokens = token.upper().split('W')
+                # if len(subTokens) > 0:
+                #     logger.debug('adding {}'.format(subTokens[0]))
+                #     wellsite_tokens.append(int(subTokens[0]))
+                # if len(subTokens) > 1:
+                #     logger.debug('adding {}'.format(subTokens[1]))
+                #     wellsite_tokens.append('W' + subTokens[1])
+
     wellsite_id = ''
-    if len(wellsite_tokens) >= 4:
-        wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}W5'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3])
-    else:
-        slots['wellsiteId'] = ''
+    if len(wellsite_tokens) >= 5:
+        wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}{}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3],wellsite_tokens[4])
+    elif len(wellsite_tokens) > 0:
         return elicit_slot(
             session_attributes,
             intent_request['currentIntent']['name'],
             slots,
             'wellsiteId',
-            {'contentType': 'PlainText', 'content': 'The wellsite id was invalid.  Please tell me a new wellsite id.'}
+            {
+                'contentType': 'PlainText',
+                'content': contentWellsiteIdFormat
+            }
         )
-        
+    else:
+        return delegate(session_attributes, intent_request['currentIntent']['slots'])
+    
     logger.debug('created wellsiteid {}'.format(wellsite_id))
     
 
@@ -584,19 +604,57 @@ def wellsite_visit(intent_request):
         elif confirmation_status == 'None':
             if wellsite_id and operator_name and time_on_site and rod_condition and fluid_level:
                 # we have all the values.  now send confirmation to ask if rod was replaced
+                if '-' in wellsite_id:
+                    msgId = wellsite_id.replace('-', ' dash ')
+                    return confirm_intent(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        slots,
+                        {
+                            'contentType': 'PlainText',
+                            'content': 'Is this the correct wellsite id? {} '.format(msgId)
+                        }
+                    )
+
                 nltk_tokens = wellsite_id.split()
                 wellsite_tokens = []
                 for token in nltk_tokens:
-                    if token.isdigit() : #or token[0] == 'w' or token[0] == 'W'
-                        logger.debug('found token'.format(token))
+                    logger.debug('token={}'.format(token))
+                    if token.isdigit(): 
+                        logger.debug('found number token: {}'.format(token))
                         wellsite_tokens.append(int(token))
+                    else:
+                        pattern = re.compile(regexShortW)
+                        match = pattern.match(token)
+                        if match:
+                            logger.debug('found W# token {}'.format(token))
+                            wellsite_tokens.append(token)
+                            # subTokens = token.upper().split('W')
+                            # if len(subTokens) > 0:
+                            #     logger.debug('adding {}'.format(subTokens[0]))
+                            #     wellsite_tokens.append(int(subTokens[0]))
+                            # if len(subTokens) > 1:
+                            #     logger.debug('adding {}'.format(subTokens[1]))
+                            #     wellsite_tokens.append('W' + subTokens[1])
+
                 wellsite_id = ''
-                if len(wellsite_tokens) >= 4:
-                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}W5'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3])
+                if len(wellsite_tokens) >= 5:
+                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}{}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3],wellsite_tokens[4])
+                elif len(wellsite_tokens) > 0:
+                    return elicit_slot(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        slots,
+                        'wellsiteId',
+                        {
+                            'contentType': 'PlainText',
+                            'content': contentWellsiteIdFormat
+                        }
+                    )
                 else:
                     return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
-                logger.debug('created wellsiteid {}'.format(wellsite_id))
+                logger.debug('transformed wellsiteid {}'.format(wellsite_id))
                 
                 return confirm_intent(
                         session_attributes,
@@ -716,7 +774,6 @@ def validate_wellsiteid_from_lex(intent_request):
 
 
     # extract slot values -> will be used for validation and eventually storage
-    wellsite_id = ' '
     wellsite_id = slots['wellsiteId']
 
 
@@ -742,12 +799,23 @@ def validate_wellsiteid_from_lex(intent_request):
                 nltk_tokens = wellsite_id.split()
                 wellsite_tokens = []
                 for token in nltk_tokens:
+                    logger.debug('token={}'.format(token))
                     if token.isdigit(): 
-                        logger.debug('found number token'.format(token))
+                        logger.debug('found number token: {}'.format(token))
                         wellsite_tokens.append(int(token))
-                    elif len(token) > 0 and token[0].upper() == 'W':
-                        logger.debug('found W# token'.format(token))
-                        wellsite_tokens.append(token)
+                    else:
+                        pattern = re.compile(regexShortW)
+                        match = pattern.match(token)
+                        if match:
+                            logger.debug('found W# token {}'.format(token))
+                            wellsite_tokens.append(token)
+                            # subTokens = token.upper().split('W')
+                            # if len(subTokens) > 0:
+                            #     logger.debug('adding {}'.format(subTokens[0]))
+                            #     wellsite_tokens.append(int(subTokens[0]))
+                            # if len(subTokens) > 1:
+                            #     logger.debug('adding {}'.format(subTokens[1]))
+                            #     wellsite_tokens.append('W' + subTokens[1])
 
                 wellsite_id = ''
                 if len(wellsite_tokens) >= 5:
@@ -760,7 +828,7 @@ def validate_wellsiteid_from_lex(intent_request):
                         'wellsiteId',
                         {
                             'contentType': 'PlainText',
-                            'content': 'Please specify wellsite id in the format 1 dash 1 dash 1 dash 1 W5'
+                            'content': contentWellsiteIdFormat
                         }
                     )
                 else:
@@ -832,6 +900,7 @@ def validate_wellsiteid_from_lex(intent_request):
                 wellsite_visit_record = retrieve_wellsite_visit_record(wellsite_id)
 
                 if wellsite_visit_record is None:
+                    logger.debug('could not find a dynamo record for wellsite {}'.format(wellsite_id))
                     msgId = wellsite_id.replace('-',' dash ')
                     slots['wellsiteId'] = ''
                     return elicit_slot(
@@ -849,93 +918,6 @@ def validate_wellsiteid_from_lex(intent_request):
         
 
     return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-def validate_comments(intent_request):
-    """
-    validates the wellsite id slot
-    """
-    logger.debug('validate intent={}'.format(intent_request['currentIntent']))
-    logger.debug('validate start session={}'.format(intent_request['sessionAttributes']))
-    slots = intent_request['currentIntent']['slots']
-    confirmation_status = intent_request['currentIntent']['confirmationStatus']
-    invocation_source = intent_request['invocationSource']
-
-    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-
-
-    # extract slot values -> will be used for validation and eventually storage
-    wellsite_id = slots['wellsiteId']
-
-
-    if invocation_source == 'DialogCodeHook':
-        logger.debug('DialogCodeHook confirmStatus={} '.format(confirmation_status))
-        if confirmation_status == 'Denied':
-            # user rejected the id
-            session_attributes['wellsiteid_confirmed'] = False
-            return elicit_slot(
-                session_attributes,
-                intent_request['currentIntent']['name'],
-                slots,
-                'wellsiteId',
-                {
-                    'contentType': 'PlainText',
-                    'content': 'Please specify the wellsite id'
-                }
-            )
-            #return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-        elif confirmation_status == 'Confirmed':
-            # update rod status as replaced
-            session_attributes['wellsiteid_confirmed'] = True
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-        elif confirmation_status == 'None':
-            if wellsite_id :
-                if '-' in wellsite_id:
-                    msgId = wellsite_id.replace('-', ' dash ')
-                    return confirm_intent(
-                        session_attributes,
-                        intent_request['currentIntent']['name'],
-                        {
-                            'wellsiteId': wellsite_id
-                        },
-                        {
-                            'contentType': 'PlainText',
-                            'content': 'Is this the correct wellsite id? {} '.format(msgId)
-                        }
-                    )
-
-                nltk_tokens = wellsite_id.split()
-                wellsite_tokens = []
-                for token in nltk_tokens:
-                    if token.isdigit() : #or token[0] == 'w' or token[0] == 'W'
-                        logger.debug('found token'.format(token))
-                        wellsite_tokens.append(int(token))
-                wellsite_id = ''
-                if len(wellsite_tokens) >= 4:
-                    wellsite_id = '{:02d}-{:02d}-{:03d}-{:02d}W5'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3])
-                else:
-                    return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-                logger.debug('created wellsiteid {}'.format(wellsite_id))
-                
-                # we have all the values.  now send confirmation to ask if rod was replaced
-                slots['wellsiteId'] = wellsite_id
-                return delegate(session_attributes, slots)
-                #return confirm_intent(
-                #        session_attributes,
-                #        intent_request['currentIntent']['name'],
-                #        slots,
-                #        {
-                #            'contentType': 'PlainText',
-                #            'content': 'Is this the correct wellsite id? {} dash {} dash {} dash {} {}'.format(wellsite_tokens[0],wellsite_tokens[1],wellsite_tokens[2],wellsite_tokens[3], 'w5')
-                #        }
-                #    )
-            # let normal processing handle whether the slots are specified
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
-
-    return delegate(session_attributes, intent_request['currentIntent']['slots'])
-    
 
 # --- Intents ---
 
@@ -974,10 +956,7 @@ def dispatch(intent_request):
     elif intent_name == 'WellsiteVisit':
         return wellsite_visit(intent_request)
     elif intent_name == 'AddComments':
-        if invocation_source == 'DialogCodeHook':
-            return validate_comments(intent_request)
-        else:
-            return add_comments(intent_request)
+        return add_comments(intent_request)
     
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
