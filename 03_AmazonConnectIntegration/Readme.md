@@ -29,7 +29,7 @@ Go to the [Amazon Connect Console](https://console.aws.amazon.com/connect/home?r
 
 1. In **Step 5: Review and create**, review your settings and then select **Create Instance**
 
-1. It will take a few minutes to setup Amazon Connect.  Just when you are thinking of going for a coffee, it will tell you **Success!**.
+1. It will take a few minutes to setup Amazon Connect.  As you are watching and thinking of going for a coffee, it will finish with **Success!**.
 </p></details>
 
 ### Claim a phone number for your Amazon Connect instance
@@ -51,7 +51,7 @@ Once your Amazon Connect instance has been created, click **Get started** to sel
     * On the screen, you will see the **Configuration Guide** that will step you through the configuration of your call center.  You can **Hide the guide** in the upper right corner.
     * Once you **Hide the guide** (in the upper right corner), you will see some basic analytics.  You should have a summary of the test calls that you made.
     * You can **configure** the appearance of your dashboard using the button on the upper right side.  Be sure you **Save** after you make your changes.
-    * on the left hand side, you will see a series of icons.  This is where you access the details of Connect.  You can hover the mouse over each icon and then click on the fly-out menu.
+    * On the left hand side, you will see a series of icons.  This is where you access the details of Connect.  You can hover the mouse over each icon and then click on the fly-out menu.
    	> If you accepted a call, you can search for it through the Contact Search option.  Navigate with the left-hand menu and select Metrics and Quality (second icon) > Contact Search.  You can then search for your call.
 </p></details>
 
@@ -65,49 +65,79 @@ With a Connect instance and a phone number, you can now create the Contact Flow 
 
 1. In the Amazon Connect Console, select your instance, then in the options menu, choose **Contact Flows**.  Scroll down until you see the `Amazon Lex` category.  Select your region and then select the Bot that you created in Module 1.
 
-1. Make sure you click **+Add Lex Bot**.  After a few seconds, you will see the `Chatbot` appear in the list of Lex bots.  You are now ready to integrate this chatbot with Connect.
+1. Make sure you click **+Add Lex Bot**.  After a few seconds, you will see the `WellsiteBot` appear in the list of Lex bots.  You are now ready to integrate this chatbot with Connect.
 
 	<img src="images/allow_connect_integration.png" alt="Allow Connect to interact with the bot"/>
 
 1. We will now return to the Connect Contact Center Manager (CCM) screen.  If you have closed the tab, you will need to re-connect by clicking on **Overview** and then **Login as administrator**.
 
-1. Once in the Connect Contact Center Manager (CCM), use the navigation pane on the left hand side to select **Routing**(third icon) and then **Contact flows**.  The page will list all the pre-configured flows that are available to you.  You can ignore most of them and move on to the next step.
-
-	![ContactFlowNavigation](images/contact_flows_navigation.png)
+1. Once in the Connect Contact Center Manager (CCM), use the navigation pane on the left hand side to select **Routing**(third icon) and then **Contact flows**.  The page will list all the pre-configured flows that are available to you.  You will ignore most of them and move on to the next step.
 
 1. In the top right corner select **Create contact flow** to open the contact flow editor.  There are two buttons, one labelled **Create contact flow** and one with an **arrow**.  Just click on the first button.
 
-1. Name your contact flow `FieldServiceChatbot`
+1. Name your contact flow `Chat with WellsiteBot`
+
+1. We will now build the contact flow as seen in the following diagram.
+
+	<img src="images/contact_flow_wiring.png" alt="Get customer input configuration" width="80%" />
+
+1. Start by expanding the **Interact** group of blocks and drag and drop the **Play Prompt** block onto the grid.
+
+	<img src="images/contact_interact.png" alt="Get customer input configuration" width="40%" />
 
 1. Expand the **Interact** group of blocks and drag and drop the **Get customer input** block onto the grid
 
-	![ContactFlowNavigation](images/contact_flows_customer_input.png)
+1. Expand the **Interact** group of blocks and drag and drop a **Play Prompt** block onto the grid
+
+1. Expand the **Interact** group of blocks and drag and drop another **Play Prompt** block onto the grid
 
 1. Collapse **Interact** and expand the **Terminate / Transfer** group of blocks and drag and drop the **Disconnect / Hang up** block onto the grid
 
-	![ContactFlowNavigation](images/contact_flows_terminate.png)
+1. We will now define the contact flow logic by connecting these building blocks.  You click on the white-circle and drag to the connection point in the next block.
 
-1. Wire up the three building blocks as shown in the image below.  You click on the white-circle and drag to the connection point in the next block.
+	<img src="images/contact_flow_wiring.png" alt="Get customer input configuration" width="50%" />
 
-	![ContactFlowWiring](images/contact_flow_wiring.png)
 
-1. Double click on the **Get customer input** block to access its configuration
+1. Everything is wired up and now we need to specify our custom text.  Double click on the **Get customer input** block to access its configuration
 
-	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `This is the Energy Co. field service line. How can I help you today?`
+	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `How can I help you today?`
+
+		<img src="images/contact_customer.png" alt="Get customer input configuration" width="50%" />
+
 
 	1. Keep the default 'Interpret as: Text'
 
 	1. Scroll down and select the **Amazon Lex** tab
 
+		<img src="images/contact_customer2.png" alt="Get customer input configuration" width="50%" />
+
 	1. Click in the drop-down box and wait for your list of chat-bots to populate.  Select `WellsiteBot`.
 
-	1. You can now select your alias, such as `dev`
+	1. You can now select your alias, such as `$LATEST`
 
 	1. Ignore the other options and Click **Save**
 
-		<img src="images/get_customer_input.png" alt="Get customer input configuration" width="50%" />
+1. Time to update our voice prompts.  Double click on the **Play Prompt** block to access its configuration.  This message will be spoken when you first connect to the chatbot.
 
-1. Click on the **down arrow** (![DownArrow](images/down.png)) next to the Save button at the top right and select **Save & Publish**
+	<img src="images/contact_prompt.png" alt="Get customer input configuration" width="40%" />	
+
+	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `Welcome to Octank's oil well services.`
+
+	1. Click **Save**
+
+1. Double click on the next **Play Prompt** block to access its configuration.  This block will give you a confirmation after the chatbot has answered your question.
+
+	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `Thank-you.`
+
+	1. Click **Save**
+
+1. Double click on the final **Play Prompt** block to access its configuration.  This block will tell you when you have encountered an error.
+
+	1. Select the **Text to speech (Ad hoc)** input type and use this welcome message:  `Sorry.  You have encountered an error.  Please call back later.`
+
+	1. Click **Save**
+
+1. Everything is wired up.  Click on the **down arrow** (![DownArrow](images/down.png)) next to the Save button at the top right and select **Save & Publish**
 
 1. Wait for the contact flow to be published successfully
 </p>
@@ -122,17 +152,23 @@ Now you need to associate your new contact flow with your phone number
 
 1. Select **Routing** (third icon) and **Phone Numbers** on the left hand Amazon Connect navigation pane
 
+	<img src="images/routing.png" alt="Get customer input configuration" width="50%" />
+
 1. Click on the number to edit the contact flow
+
+	<img src="images/routing_phone.png" alt="Get customer input configuration" width="50%" />
 
 1. Update the description 'Contact flow for customer service chatbot'.
 
-1. In the **Contact flow/IVR** field, search and select the `FieldServiceChatbot` contact flow.
+1. In the **Contact flow/IVR** field, search and select the `Chat with WellsiteBot` contact flow.
 
 1. Select **Save** to confirm the contact flow association
 </p></details>
 
 ### Test your Amazon Lex enabled Amazon Connect contact flow
-Dial your Amazon Connect contact center phone number to confirm functionality of contact flow and Amazon Lex integration. Ask the virtual service agent **"What is the fluid level at site 01-01-001-01W5"**.
+Dial your Amazon Connect contact center phone number to confirm functionality of contact flow and Amazon Lex integration. Ask the virtual service agent **"What is the fluid level at site 1 dash 1 dash 1 dash 1 dash w5"**.
+
+### Optional Improvement ###
 
 ### Make phone number available to the bot
 In this last step we are enhancing the customer input configuration of the contact flow to make the caller's phone number available to the bot.
@@ -148,7 +184,7 @@ In this last step we are enhancing the customer input configuration of the conta
 
 	![ContactFlowNavigation](images/contact_flows_navigation.png)
 
-1. Click the `FieldServiceChatbot` flow to open the flow
+1. Click the `Chat with WellsiteBot` flow to open the flow
 
 1. Click the **Get customer input** block to access its configuration
 
@@ -175,6 +211,5 @@ In this last step we are enhancing the customer input configuration of the conta
  	![ContactFlowNavigation](images/publish_confirmation.png)
 </details>
 
-### Test your bot with Amazon Connect
-Call your Amazon Connect phone number to interact with your bot over the phone.  Ask the virtual service agent **"What international plans do you have?"**. When asked for your pin code enter the last four digits of the phone number you are calling from.
+
 
