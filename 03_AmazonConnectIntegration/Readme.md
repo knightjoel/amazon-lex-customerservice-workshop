@@ -40,15 +40,12 @@ Once your Amazon Connect instance has been created, click **Get started** to sel
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary><p>
 
-1. Select **Get started** to open the Amazon Connect Contact Center Manager (CCM) welcome screen.  When prompted, you want to allow the browser to access your microphone.  This will allow you to answer calls from your browser.
+1. Select **Get started** to open the Amazon Connect Contact Center Manager (CCM) welcome screen. Your browser may prompt you to allow access to your computer's microphone. This is for the case where a human agent would be answering incoming calls. You can safely decline to allow microphone access.
 
 1. Select **Let's go** to claim a phone number
 
 1. Select **Canada+1**, **Direct Dial**, and choose a phone number from the numbers provided.  Click **Next**.
     > If you are concerned about the Area Code location, you can check its geography from the following Wikipedia link: https://en.wikipedia.org/wiki/List_of_North_American_Numbering_Plan_area_codes#Canada
-
-1. You can now make a test call and get the default Connect experience.  Dial the phone number you selected in step 3 (displayed on screen) from another phone (e.g. your mobile phone).  Once connected, choose **1** from the voice menu to connect with an agent; the Amazon Connect Contract Control Panel (the current page) will then prompt you to answer the call.
-	> It may take a few minutes before the claimed phone number is active.
 
 1. Choose **Continue** to get to the Amazon Connect Contact Center Manager App (CCM).  Feel free to click around to see what is available.
     * On the screen, you will see the **Configuration Guide** that will step you through the configuration of your call center.  You can **Hide the guide** in the upper right corner.
@@ -98,9 +95,10 @@ With a Connect instance and a phone number, you can now create the Contact Flow 
 1. Collapse **Interact** and expand the **Terminate / Transfer** group of blocks and drag and drop the **Disconnect / Hang up** block onto the grid
 
 1. We will now define the contact flow logic by connecting these building blocks.  You click on the white-circle and drag to the connection point in the next block.
+Click <a href="https://raw.githubusercontent.com/knightjoel/amazon-lex-customerservice-workshop/master/03_AmazonConnectIntegration/images/contact_flow_wiring.png">
+here</a> for a high-res image of the call flow.
 
 	<img src="images/contact_flow_wiring.png" alt="Get customer input configuration" width="50%" />
-
 
 1. Everything is wired up and now we need to specify our custom text.  Double click on the **Get customer input** block to access its configuration
 
