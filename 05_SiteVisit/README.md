@@ -48,7 +48,7 @@ to `Slot types` in the left-hand menu.
 
 1. Value: Enter the value **Poor** and synonym **Bad**. Hit the **+** button.
 
-1. Repeat the above step for these values:
+1. Repeat the above step for these values (you can use synonyms of your choosing for each or leave that field blank):
 	- **Fair**
 	- **Good**
 	- **Excellent**
@@ -56,9 +56,9 @@ to `Slot types` in the left-hand menu.
 
 1. Click **Save slot type**
 
-<p>
 Add a slot named `wellsiteId` to the `WellsiteVisit` intent.
 
+<p>
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary>
 
@@ -72,7 +72,7 @@ Add a slot named `wellsiteId` to the `WellsiteVisit` intent.
 
 1. Click the (+) sign to add the slot
 
-	![screenshot for after configuring slot](images/slot-config.png)
+	<img src="images/slot-config.png" />
 </details>
 </p>
 
@@ -94,9 +94,9 @@ Add a slot named `operatorName` to the `WellsiteVisit` intent.
 </details>
 </p>
 
-<p>
 Add a slot named `timeOnSite` to the `WellsiteVisit` intent.
 
+<p>
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary>
 
@@ -112,9 +112,9 @@ Add a slot named `timeOnSite` to the `WellsiteVisit` intent.
 </details>
 </p>
 
-<p>
 Add a slot named `rodCondition` to the `WellsiteVisit` intent.
 
+<p>
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary>
 
@@ -130,9 +130,9 @@ Add a slot named `rodCondition` to the `WellsiteVisit` intent.
 </details>
 </p>
 
-<p>
 Add a slot named `fluidLevel` to the `WellsiteVisit` intent.
 
+<p>
 <details>
 <summary><strong>Step-by-step instructions (expand for details)</strong></summary>
 
