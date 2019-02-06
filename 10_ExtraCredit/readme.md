@@ -44,16 +44,33 @@ Why not add more channels your customer can use to reach your customer service? 
 	
 ## Challenge 2: make the bot support additional intents
 
-Some ideas: 
+The business logic behind the well site visit bot has been written to support additional intents beyond just checking the fluid level and recording a site visit.
 
-* Add a `Hello` intent to greet users and give them guidance on what the bot can help them with. (The bot handler lambda function already has support for this)
-
-* Add a `ListInternationalPlans` intent to allow users to check what international travel plans they already have on their account.  (The bot handler lambda function already has support for this)
-
-* Add a `Finish` intent to allow users to signal they are done with the conversation (The bot handler lambda function already has support for this)
-
-* Add an intent to describe in more detail how a particular plan works. (you need to update the lambda function to add support for this)
-
+* Add a `GetProductionStats` intent with these properties:
+	* Utterances:
+		* `production at {wellsiteId}`
+		* `production`
+		* `What is the current production`
+		* `What is the current production at {wellsiteId}`
+	* Initialization and validation: `chatbot-workshop-LexBotHandler`
+	* 1 slot:
+		* Name: `wellsiteId`
+		* Slot Type: `WellSiteIdType`
+		* Prompt: `What is the well site id?`
+		* Required: Yes
+	* Fulfillment: AWS Lambda function `chatbot-workshop-LexBotHandler`
+* Add a `GetRodReplacement` intent with these properties:
+	* Utterances:
+		* `rod at {wellsiteId}`
+		* `rod`
+		* `when was the rod last replaced at {wellsiteId}`
+	* Initialization and validation: `chatbot-workshop-LexBotHandler`
+	* 1 slot:
+		* Name: `wellsiteId`
+		* Slot Type: `WellSiteIdType`
+		* Prompt: `What is the well site id?`
+		* Required: Yes
+	* Fulfillment: AWS Lambda function `chatbot-workshop-LexBotHandler`
 
 ## Challenge 3: build a bot for your own customer service use case
 
